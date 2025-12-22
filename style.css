@@ -32,7 +32,8 @@ body {
 #focusModeScreen h1, 
 #timeBasedSuggestionsScreen h1, 
 #groupTasksScreen h1,
-#weeklyReportScreen h1 /* Added Weekly Report */
+#weeklyReportScreen h1, /* Added Weekly Report */
+#voiceStatus /* Added Voice Assistant Status */
 {
     font-family: 'Abril Fatface', cursive;
 }
@@ -214,7 +215,7 @@ body {
 #sidebarMenu h2 { color: #1554de; }
 
 /* Input field styling */
-input[type="text"], input[type="date"], input[type="time"], input[type="datetime-local"], textarea {
+input[type="text"], input[type="password"], input[type="date"], input[type="time"], input[type="datetime-local"], textarea {
     background-color: white;
     color: #1554de;
     border: 1px solid #1554de;

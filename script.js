@@ -7,7 +7,7 @@ let currentUserId = null;
 // Local Group State
 let currentGroup = null; 
 
-// New: History of visited screens for back navigation
+// History of visited screens for back navigation
 let screenHistory = [];
 let headerRotationInterval;
 
@@ -799,8 +799,6 @@ async function handleToggleComplete(id, completed) {
             if (newCompletedStatus && task.substeps) {
                 task.substeps.forEach(sub => sub.completed = true);
             }
-            // If marking incomplete, reset sub-steps? Usually yes, or keep them. 
-            // Let's keep sub-step state if marking incomplete for flexibility.
             
             const completedAt = newCompletedStatus ? new Date().toISOString() : null;
             return { ...task, completed: newCompletedStatus, completedAt: completedAt };
@@ -808,7 +806,6 @@ async function handleToggleComplete(id, completed) {
         return task;
     });
     
-    // Check if task completed, then update streak
     const task = mockTasks.find(t => t.id === id);
     if (task && task.completed) {
         updateDailyCompletion(new Date());
@@ -1437,6 +1434,167 @@ function deleteGroupTask(taskId) {
     renderGroupTasks();
 }
 
+// --- Kayra AI Voice Assistant Logic ---
+const startVoiceBtn = document.getElementById('startVoiceBtn');
+const voiceOverlay = document.getElementById('voiceOverlay');
+const closeVoiceBtn = document.getElementById('closeVoiceBtn');
+const voiceStatus = document.getElementById('voiceStatus');
+const voiceUserText = document.getElementById('voiceUserText');
+const voiceResponseText = document.getElementById('voiceResponseText');
+
+const apiKeyModal = document.getElementById('apiKeyModal');
+const apiKeyInput = document.getElementById('apiKeyInput');
+const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+const cancelApiKeyBtn = document.getElementById('cancelApiKeyBtn');
+const openApiKeyModalBtn = document.getElementById('openApiKeyModalBtn');
+
+let recognition;
+let synth = window.speechSynthesis;
+let isListening = false;
+
+// 1. Setup Speech Recognition
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false; // Stop after one sentence
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+        isListening = true;
+        voiceStatus.textContent = "Kayra is listening...";
+        voiceUserText.textContent = "";
+        voiceResponseText.textContent = "";
+    };
+
+    recognition.onend = () => {
+        isListening = false;
+        // If overlay is still open and we didn't just speak, maybe restart?
+        // For simple interaction, we stop and wait for processing.
+    };
+
+    recognition.onresult = async (event) => {
+        const transcript = event.results[0][0].transcript;
+        voiceUserText.textContent = `You: "${transcript}"`;
+        voiceStatus.textContent = "Thinking...";
+        
+        if (transcript.toLowerCase() === "exit" || transcript.toLowerCase() === "stop") {
+            closeVoiceOverlay();
+            return;
+        }
+
+        // Send to Gemini
+        const reply = await askGemini(transcript);
+        voiceResponseText.textContent = reply;
+        voiceStatus.textContent = "Speaking...";
+        speakText(reply);
+    };
+
+    recognition.onerror = (event) => {
+        voiceStatus.textContent = "Error: " + event.error;
+        isListening = false;
+    };
+} else {
+    console.error("Browser does not support Web Speech API");
+}
+
+// 2. Open/Close Logic
+if (startVoiceBtn) {
+    startVoiceBtn.addEventListener('click', () => {
+        const key = localStorage.getItem('gemini_api_key');
+        if (!key) {
+            apiKeyModal.classList.remove('hidden');
+        } else {
+            voiceOverlay.classList.remove('hidden');
+            try { recognition.start(); } catch(e) {}
+        }
+    });
+}
+
+if (closeVoiceBtn) {
+    closeVoiceBtn.addEventListener('click', closeVoiceOverlay);
+}
+
+function closeVoiceOverlay() {
+    voiceOverlay.classList.add('hidden');
+    recognition.stop();
+    synth.cancel();
+}
+
+// 3. API Key Management
+if (openApiKeyModalBtn) openApiKeyModalBtn.addEventListener('click', () => apiKeyModal.classList.remove('hidden'));
+if (cancelApiKeyBtn) cancelApiKeyBtn.addEventListener('click', () => apiKeyModal.classList.add('hidden'));
+
+if (saveApiKeyBtn) {
+    saveApiKeyBtn.addEventListener('click', () => {
+        const key = apiKeyInput.value.trim();
+        if (key) {
+            localStorage.setItem('gemini_api_key', key);
+            apiKeyModal.classList.add('hidden');
+            apiKeyInput.value = '';
+            showModal("API Key saved! You can now use Kayra.");
+        }
+    });
+}
+
+// 4. Gemini API Call
+async function askGemini(prompt) {
+    const apiKey = localStorage.getItem('gemini_api_key');
+    if (!apiKey) return "Please set your API key in settings.";
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const systemPrompt = `You are an AI named Kayra. The current date is ${today}. Respond like a friendly assistant. Keep answers brief (under 2 sentences) for speech synthesis.`;
+
+    const data = {
+        contents: [{
+            parts: [{ text: systemPrompt + "\nUser: " + prompt }]
+        }]
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const json = await response.json();
+        if (json.candidates && json.candidates[0].content) {
+            return json.candidates[0].content.parts[0].text;
+        } else {
+            return "Sorry, I couldn't understand that.";
+        }
+    } catch (error) {
+        console.error("Gemini API Error:", error);
+        return "Error connecting to AI.";
+    }
+}
+
+// 5. Text to Speech
+function speakText(text) {
+    if (synth.speaking) {
+        console.error('speechSynthesis.speaking');
+        return;
+    }
+    if (text !== '') {
+        const utterThis = new SpeechSynthesisUtterance(text);
+        utterThis.onend = function (event) {
+            voiceStatus.textContent = "Kayra is listening...";
+            try { recognition.start(); } catch(e) {} // Resume listening after speaking
+        };
+        utterThis.onerror = function (event) {
+            console.error('SpeechSynthesisUtterance.onerror');
+        };
+        // Optional: Select a specific voice
+        // const voices = synth.getVoices();
+        // utterThis.voice = voices[0]; 
+        synth.speak(utterThis);
+    }
+}
+
+
 // --- Initialization ---
 
 window.onload = function() {
@@ -1523,4 +1681,13 @@ window.onload = function() {
     });
 
     initializeCustomRadios(settingsScreen);
+    saveNotificationTimeBtn.addEventListener('click', () => {
+        const lockScreenSetting = settingsScreen.querySelector('input[name="lockScreenSetting"]:checked');
+        const notificationTime = settingsScreen.querySelector('input[name="notificationTime"]:checked');
+        
+        const lockScreenValue = lockScreenSetting ? lockScreenSetting.value : 'Not selected';
+        const notificationTimeValue = notificationTime ? notificationTime.value.replace('_', ' ') : 'Not selected';
+
+        showModal(`Settings saved! Lock Screen: ${lockScreenValue}, Notification Time: ${notificationTimeValue}.`);
+    });
 };

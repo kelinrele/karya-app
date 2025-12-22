@@ -9,10 +9,34 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="style.css"> 
 </head>
 <body class="min-h-screen flex flex-col">
+
+    <div id="voiceOverlay" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex flex-col items-center justify-center text-white">
+        <div class="animate-pulse mb-8">
+            <i class="fas fa-microphone text-6xl text-[#1554de] bg-white p-6 rounded-full"></i>
+        </div>
+        <h2 id="voiceStatus" class="text-3xl font-bold mb-4" style="font-family: 'Abril Fatface', cursive;">Kayra is listening...</h2>
+        <div id="voiceTranscriptBox" class="w-full max-w-lg p-4 text-center">
+            <p id="voiceUserText" class="text-xl font-bold mb-2 text-blue-300"></p>
+            <p id="voiceResponseText" class="text-lg opacity-90"></p>
+        </div>
+        <button id="closeVoiceBtn" class="mt-12 border border-white px-8 py-3 rounded-full hover:bg-white hover:text-black transition text-lg font-bold">Stop</button>
+    </div>
+
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white text-[#1554de] p-6 rounded-lg shadow-xl max-w-sm w-full font-sans text-center border-2 border-[#1554de]">
+            <h3 class="text-xl font-bold mb-4">Enable Kayra AI</h3>
+            <p class="mb-4 text-sm">To use the AI assistant, please enter your Gemini API Key. It will be saved locally on your device.</p>
+            <input type="password" id="apiKeyInput" placeholder="Paste Gemini API Key" class="w-full p-2 border border-[#1554de] rounded mb-4">
+            <div class="flex justify-center space-x-4">
+                <button id="saveApiKeyBtn" class="px-6 py-2 bg-[#1554de] text-white hover:opacity-90 rounded-full">Save</button>
+                <button id="cancelApiKeyBtn" class="px-6 py-2 bg-red-600 text-white hover:opacity-90 rounded-full">Cancel</button>
+            </div>
+            <p class="mt-2 text-xs text-gray-500"><a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline">Get a key here</a></p>
+        </div>
+    </div>
 
     <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white text-[#1554de] p-6 rounded-lg shadow-xl max-w-sm w-full font-sans text-center border-2 border-[#1554de]">
@@ -27,36 +51,29 @@
     <div id="addTaskModal" class="hidden">
         <div id="addTaskModalContent">
             <h3 class="text-2xl font-bold mb-4">Add New Task</h3>
-            
             <div class="modal-input-card">
                 <label for="modalTaskNameInput">Task Name:</label>
                 <input type="text" id="modalTaskNameInput" placeholder="Add your task">
             </div>
-            
             <div class="modal-input-card">
                 <label class="block mb-2 font-bold">Due Date or Interval:</label>
                 <div class="flex space-x-2 mb-2">
                     <input type="radio" name="dueDateType" id="dueDateTypeSingle" value="single" class="hidden" checked>
                     <label for="dueDateTypeSingle" class="date-option-label">Single Date</label>
-
                     <input type="radio" name="dueDateType" id="dueDateTypeInterval" value="time_period" class="hidden">
                     <label for="dueDateTypeInterval" class="date-option-label">Time Period</label>
                 </div>
-
                 <div id="singleDateOptions">
                     <div class="flex space-x-2 mb-2">
                         <input type="radio" name="taskDueDate" id="dueDateToday" value="today" class="hidden" checked>
                         <label for="dueDateToday" class="date-option-label">Today</label>
-
                         <input type="radio" name="taskDueDate" id="dueDateTomorrow" value="tomorrow" class="hidden">
                         <label for="dueDateTomorrow" class="date-option-label">Tomorrow</label>
-
                         <input type="radio" name="taskDueDate" id="dueDateOther" value="other" class="hidden">
                         <label for="dueDateOther" class="date-option-label">Other</label>
                     </div>
                     <input type="date" id="modalTaskDateInput" class="hidden"> 
                 </div>
-                
                 <div id="intervalOptions" class="hidden">
                     <label for="modalBeginningDateTimeInput">Beginning Time/Date:</label>
                     <input type="datetime-local" id="modalBeginningDateTimeInput" class="mb-2">
@@ -64,17 +81,14 @@
                     <input type="datetime-local" id="modalEndingDateTimeInput" class="mb-2">
                 </div>
             </div>
-            
             <div class="modal-input-card">
                 <label for="modalTaskTimeInput">Time (Optional):</label>
                 <input type="time" id="modalTaskTimeInput">
             </div>
-
             <div class="modal-input-card">
                 <label for="modalSubstepsInput">Sub-steps (one per line):</label>
                 <textarea id="modalSubstepsInput" rows="4" placeholder="e.g. Step 1 (30 min)" class="w-full p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" style="color: #1554de; border: 1px solid #1554de;"></textarea>
             </div>
-            
             <div class="button-group">
                 <button id="saveTaskBtn">Save Task</button>
                 <button id="cancelAddTaskBtn">Cancel</button>
@@ -89,7 +103,6 @@
     <div id="authScreen" class="screen p-4">
         <h1 class="text-3xl md:text-4xl font-bold mb-8">Welcome to Karya</h1>
         <p class="text-xl mb-12">Your Local Productivity Hub</p>
-
         <div class="w-full max-w-sm flex flex-col space-y-4">
             <button id="continueWithEmailBtn" class="bg-[#1554de] text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg w-full fade-in-element active">
                 Enter App (Local Storage)
@@ -108,9 +121,12 @@
                 <img src="images/karyalogoK.png" alt="Karya Icon" class="w-8 h-8 mr-2">
                 <span id="headerTaskName" class="header-text-rotate">List</span>
             </h1>
-            <div class="header-right-btn">
+            <div class="header-right-btn flex space-x-2">
+                <button id="startVoiceBtn" class="p-2 rounded-md hover:bg-gray-200">
+                    <i class="fas fa-microphone text-2xl text-[#1554de]"></i>
+                </button>
                 <button id="menuBtn" class="p-2 rounded-md hover:bg-gray-200">
-                    <i class="fas fa-bars text-3xl"></i>
+                    <i class="fas fa-bars text-3xl text-[#1554de]"></i>
                 </button>
             </div>
         </div>
@@ -135,7 +151,6 @@
             <div id="streakDisplay" class="floating-card w-full max-w-md mb-4 text-center text-2xl font-bold text-[#FDC056] mt-20">
                 🔥 <span id="currentStreakCount">0</span>-day streak!
             </div>
-
             <div id="addTaskInputCard" class="floating-card w-full max-w-md mt-8 mb-8"> 
                 <div class="flex mb-6 space-x-2">
                     <input type="text" id="newTaskInput" placeholder="Add your task" class="flex-grow p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" style="color: #1554de; border: 1px solid #1554de;">
@@ -143,7 +158,6 @@
                 </div>
                 <p class="text-[#1554de] text-center mt-2 hidden" id="noTasksMessageInputSection">You haven't added any tasks yet</p>
             </div>
-
             <div id="ideaInboxSectionHome" class="floating-card w-full max-w-md mb-8">
                 <h2 class="text-xl font-bold mb-4 text-[#1554de] text-left">Quick Ideas</h2>
                 <div class="flex space-x-2 mb-4">
@@ -155,7 +169,6 @@
                     <p class="text-[#1554de] text-center text-sm" id="noIdeasMessageHome">No ideas captured yet.</p>
                 </div>
             </div>
-
             <div id="taskListWrapper" class="flex-grow overflow-y-auto w-full max-w-md">
                 <div id="taskListContentCard" class="floating-card-inside-list"> 
                     <div id="taskList" class="space-y-4">
@@ -346,6 +359,10 @@
 
         <div class="flex-grow flex flex-col items-center p-4 w-full">
             <div class="floating-card w-full max-w-md p-6 mt-20">
+                <button id="openApiKeyModalBtn" class="w-full bg-[#1554de] text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg font-semibold mb-8">
+                    Set Gemini API Key
+                </button>
+
                 <p class="text-lg mb-4 font-bold text-[#1554de]">Show Tasks on Lock Screen</p>
                 <div class="flex items-center space-x-6 mb-8">
                     <label class="flex items-center cursor-pointer">
