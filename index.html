@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karya App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white text-[#1554de] p-6 rounded-lg shadow-xl max-w-sm w-full font-sans text-center border-2 border-[#1554de]">
+            <p id="modalMessage" class="mb-6 text-lg"></p>
+            <div class="flex justify-center space-x-4">
+                <button id="modalConfirmBtn" class="px-6 py-2 bg-[#1554de] text-white hover:opacity-90 rounded-full transition-colors duration-200">OK</button>
+                <button id="modalCancelBtn" class="px-6 py-2 bg-red-600 text-white hover:opacity-90 rounded-full transition-colors duration-200 hidden">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addTaskModal" class="hidden">
+        <div id="addTaskModalContent">
+            <h3 class="text-2xl font-bold mb-4">Add New Task</h3>
+            
+            <div class="modal-input-card">
+                <label for="modalTaskNameInput">Task Name:</label>
+                <input type="text" id="modalTaskNameInput" placeholder="Add your task">
+            </div>
+            
+            <div class="modal-input-card">
+                <label class="block mb-2 font-bold">Due Date or Interval:</label>
+                <div class="flex space-x-2 mb-2">
+                    <input type="radio" name="dueDateType" id="dueDateTypeSingle" value="single" class="hidden" checked>
+                    <label for="dueDateTypeSingle" class="date-option-label">Single Date</label>
+
+                    <input type="radio" name="dueDateType" id="dueDateTypeInterval" value="time_period" class="hidden">
+                    <label for="dueDateTypeInterval" class="date-option-label">Time Period</label>
+                </div>
+
+                <div id="singleDateOptions">
+                    <div class="flex space-x-2 mb-2">
+                        <input type="radio" name="taskDueDate" id="dueDateToday" value="today" class="hidden" checked>
+                        <label for="dueDateToday" class="date-option-label">Today</label>
+
+                        <input type="radio" name="taskDueDate" id="dueDateTomorrow" value="tomorrow" class="hidden">
+                        <label for="dueDateTomorrow" class="date-option-label">Tomorrow</label>
+
+                        <input type="radio" name="taskDueDate" id="dueDateOther" value="other" class="hidden">
+                        <label for="dueDateOther" class="date-option-label">Other</label>
+                    </div>
+                    <input type="date" id="modalTaskDateInput" class="hidden"> 
+                </div>
+                
+                <div id="intervalOptions" class="hidden">
+                    <label for="modalBeginningDateTimeInput">Beginning Time/Date:</label>
+                    <input type="datetime-local" id="modalBeginningDateTimeInput" class="mb-2">
+                    <label for="modalEndingDateTimeInput">Ending Time/Date:</label>
+                    <input type="datetime-local" id="modalEndingDateTimeInput" class="mb-2">
+                </div>
+            </div>
+            
+            <div class="modal-input-card">
+                <label for="modalTaskTimeInput">Time (Optional):</label>
+                <input type="time" id="modalTaskTimeInput">
+            </div>
+
+            <div class="modal-input-card">
+                <label for="modalSubstepsInput">Sub-steps (one per line):</label>
+                <textarea id="modalSubstepsInput" rows="4" placeholder="e.g. Step 1 (30 min)" class="w-full p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" style="color: #1554de; border: 1px solid #1554de;"></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button id="saveTaskBtn">Save Task</button>
+                <button id="cancelAddTaskBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="splashScreen" class="screen flex items-center justify-center">
+        <img src="images/karyalogoFull.png" alt="Karya Logo" class="h-64 w-auto object-contain">
+    </div>
+
+    <div id="authScreen" class="screen p-4">
+        <h1 class="text-3xl md:text-4xl font-bold mb-8">Welcome to Karya</h1>
+        <p class="text-xl mb-12">Your Local Productivity Hub</p>
+
+        <div class="w-full max-w-sm flex flex-col space-y-4">
+            <button id="continueWithEmailBtn" class="bg-[#1554de] text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg w-full fade-in-element active">
+                Enter App (Local Storage)
+            </button>
+        </div>
+    </div>
+
+    <div id="todoListScreen" class="screen flex-col">
+        <div class="header">
+            <div class="header-left-btn">
+                <button id="backBtnTodoList" class="p-2 rounded-md hover:bg-gray-200 hidden">
+                    <i class="fas fa-arrow-left text-3xl" style="color: #1554de;"></i>
+                </button>
+            </div>
+            <h1 class="text-3xl font-bold flex items-center justify-center">
+                <img src="images/karyalogoK.png" alt="Karya Icon" class="w-8 h-8 mr-2">
+                <span id="headerTaskName" class="header-text-rotate">List</span>
+            </h1>
+            <div class="header-right-btn">
+                <button id="menuBtn" class="p-2 rounded-md hover:bg-gray-200">
+                    <i class="fas fa-bars text-3xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="sidebarMenu" class="sidebar fixed inset-y-0 right-0 w-64 shadow-lg z-40">
+            <div class="p-6">
+                <h2 class="text-2xl font-bold mb-6">Menu</h2>
+                <ul class="space-y-4">
+                    <li><button id="homeMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-home mr-3"></i> Home</button></li>
+                    <li><button id="settingsMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-cog mr-3"></i> Settings</button></li>
+                    <li><button id="historyMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-history mr-3"></i> History</button></li>
+                    <li><button id="groupTasksMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-users mr-3"></i> Group Tasks</button></li>
+                    <li><button id="focusModeMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-hourglass-half mr-3"></i> Focus Mode</button></li>
+                    <li><button id="weeklyReportMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-chart-bar mr-3"></i> Weekly Report</button></li>
+                    <li><button id="signOutMenuItem" class="flex items-center text-xl text-red-600 hover:text-red-700"><i class="fas fa-sign-out-alt mr-3"></i> Reset Data</button></li>
+                </ul>
+            </div>
+        </div>
+        <div id="menuOverlay" class="overlay"></div>
+
+        <div class="flex-grow flex flex-col items-center p-4 w-full">
+            <div id="streakDisplay" class="floating-card w-full max-w-md mb-4 text-center text-2xl font-bold text-[#FDC056] mt-20">
+                🔥 <span id="currentStreakCount">0</span>-day streak!
+            </div>
+
+            <div id="addTaskInputCard" class="floating-card w-full max-w-md mt-8 mb-8"> 
+                <div class="flex mb-6 space-x-2">
+                    <input type="text" id="newTaskInput" placeholder="Add your task" class="flex-grow p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" style="color: #1554de; border: 1px solid #1554de;">
+                    <button id="addTaskBtn" class="bg-[#1554de] text-white px-6 py-3 rounded-lg shadow-md hover:opacity-90 transition-colors duration-200 font-semibold">Add</button>
+                </div>
+                <p class="text-[#1554de] text-center mt-2 hidden" id="noTasksMessageInputSection">You haven't added any tasks yet</p>
+            </div>
+
+            <div id="ideaInboxSectionHome" class="floating-card w-full max-w-md mb-8">
+                <h2 class="text-xl font-bold mb-4 text-[#1554de] text-left">Quick Ideas</h2>
+                <div class="flex space-x-2 mb-4">
+                    <input type="text" id="newIdeaInputHome" placeholder="Quick capture your idea" class="flex-grow p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" style="color: #1554de; border: 1px solid #1554de;">
+                    <button id="addIdeaBtnHome" class="bg-[#1554de] text-white px-6 py-3 rounded-lg shadow-md hover:opacity-90 transition-colors duration-200 font-semibold">Add</button>
+                </div>
+                <button id="toggleIdeaListBtn" class="text-[#1554de] hover:underline text-sm mb-4">View All Ideas <i class="fas fa-chevron-down ml-1"></i></button>
+                <div id="ideaListHome" class="space-y-2 hidden">
+                    <p class="text-[#1554de] text-center text-sm" id="noIdeasMessageHome">No ideas captured yet.</p>
+                </div>
+            </div>
+
+            <div id="taskListWrapper" class="flex-grow overflow-y-auto w-full max-w-md">
+                <div id="taskListContentCard" class="floating-card-inside-list"> 
+                    <div id="taskList" class="space-y-4">
+                        <p class="text-[#1554de] text-center" id="noTasksMessage">You haven't added any tasks yet</p>
+                    </div>
+                </div>
+            </div>
+            <p class="text-[#1554de] text-sm mt-4">User ID: <span id="userIdDisplay">Local User</span></p>
+        </div>
+    </div>
+
+    <div id="historyScreen" class="screen flex-col">
+        <div class="header">
+            <div class="header-left-btn">
+                <button id="backBtnHistory" class="p-2 rounded-md hover:bg-gray-200">
+                    <i class="fas fa-arrow-left text-3xl" style="color: #1554de;"></i>
+                </button>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold flex-grow">History</h1>
+            <div class="header-right-btn"></div>
+        </div>
+        <div class="flex-grow flex flex-col items-center p-4 w-full">
+            <div id="streakHistoryListWrapper" class="floating-card flex-grow overflow-y-auto w-full max-w-md mt-20 mb-8">
+                <h2 class="text-xl font-bold mb-4 text-[#1554de] text-left">Streak History</h2>
+                <div id="streakHistoryList" class="space-y-4">
+                    <p class="text-[#1554de] text-center" id="noStreakHistoryMessage">No streak history yet.</p>
+                </div>
+            </div>
+
+            <div id="previousTaskListWrapper" class="floating-card flex-grow overflow-y-auto w-full max-w-md">
+                <h2 class="text-xl font-bold mb-4 text-[#1554de] text-left">Previous Tasks</h2>
+                <div id="previousTaskList" class="space-y-4">
+                    <p class="text-[#1554de] text-center" id="noPreviousTasksMessage">No previous tasks yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="weeklyReportScreen" class="screen flex-col">
+        <div class="header">
+            <div class="header-left-btn">
+                <button id="backBtnWeeklyReport" class="p-2 rounded-md hover:bg-gray-200">
+                    <i class="fas fa-arrow-left text-3xl" style="color: #1554de;"></i>
+                </button>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold flex-grow">Weekly Report</h1>
+            <div class="header-right-btn"></div>
+        </div>
+
+        <div class="flex-grow flex flex-col items-center p-4 w-full">
+            <div class="floating-card w-full max-w-md p-6 mt-20 text-center">
+                <h2 class="text-xl font-bold text-[#1554de] mb-2">Past 7 Days</h2>
+                <div class="text-6xl font-bold text-[#1554de] mb-2" id="weeklyTotalCount">0</div>
+                <p class="text-lg text-[#1554de]">Tasks Completed</p>
+            </div>
+
+            <div id="weeklyReportListWrapper" class="floating-card flex-grow overflow-y-auto w-full max-w-md mt-6">
+                <h2 class="text-xl font-bold mb-4 text-[#1554de] text-left">Daily Breakdown</h2>
+                <div id="weeklyReportList" class="space-y-4">
+                    <p class="text-[#1554de] text-center hidden" id="noWeeklyDataMessage">No tasks completed in the last 7 days.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="focusModeScreen" class="screen flex-col">
+        <div class="header">
+            <div class="header-left-btn">
+                <button id="backBtnFocusMode" class="p-2 rounded-md hover:bg-gray-200">
+                    <i class="fas fa-arrow-left text-3xl" style="color: #1554de;"></i>
+                </button>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold flex-grow">Focus Mode</h1>
+            <div class="header-right-btn"></div>
+        </div>
+        <div class="flex-grow flex flex-col items-center p-4 w-full justify-center">
+            <div id="focusSetupCard" class="floating-card w-full max-w-md text-center p-6 mt-20">
+                <h2 class="text-2xl font-bold mb-4 text-[#1554de]">Set Up Your Focus Session</h2>
+                <div class="mb-6">
+                    <p class="text-lg font-semibold mb-3 text-[#1554de]">Study Length:</p>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <input type="radio" name="studyLength" id="studyLength5" value="5" class="hidden">
+                        <label for="studyLength5" class="study-length-option-label">5 min</label>
+                        <input type="radio" name="studyLength" id="studyLength15" value="15" class="hidden">
+                        <label for="studyLength15" class="study-length-option-label">15 min</label>
+                        <input type="radio" name="studyLength" id="studyLength25" value="25" class="hidden" checked>
+                        <label for="studyLength25" class="study-length-option-label">25 min</label>
+                        <input type="radio" name="studyLength" id="studyLength45" value="45" class="hidden">
+                        <label for="studyLength45" class="study-length-option-label">45 min</label>
+                        <input type="radio" name="studyLength" id="studyLengthCustom" value="custom" class="hidden">
+                        <label for="studyLengthCustom" class="study-length-option-label">Custom</label>
+                    </div>
+                    <input type="number" id="customStudyLengthInput" placeholder="Min" class="hidden w-24 mt-3 p-2 rounded-lg text-center text-lg border-2 border-[#1554de] text-[#1554de]">
+                </div>
+                <div class="mb-6">
+                    <label for="focusTaskSelect" class="block text-lg font-semibold mb-3 text-[#1554de]">Optional Task to Focus On:</label>
+                    <select id="focusTaskSelect" class="w-full p-3 rounded-lg text-lg border-2 border-[#1554de] text-[#1554de] bg-white">
+                        <option value="">Optional: Select a Task</option>
+                    </select>
+                </div>
+                <button id="setFocusBtn" class="bg-[#1554de] text-white py-3 px-8 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg font-semibold">Set Focus</button>
+            </div>
+
+            <div id="activeFocusSession" class="floating-card w-full max-w-md text-center p-6 mt-8 hidden">
+                <p class="text-xl mb-4 text-[#1554de]" id="focusTaskDisplay">No task selected</p>
+                <div id="timerDisplay" class="text-7xl font-bold mb-8 text-[#FDC056]">25:00</div>
+                <div class="flex justify-center space-x-4">
+                    <button id="startFocusBtnActive" class="bg-[#1554de] text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg">Start</button>
+                    <button id="pauseFocusBtnActive" class="bg-gray-500 text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg hidden">Pause</button>
+                    <button id="resetFocusBtnActive" class="bg-red-600 text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="groupTasksScreen" class="screen flex-col">
+        <div class="header">
+            <div class="header-left-btn">
+                <button id="backBtnGroupTasks" class="p-2 rounded-md hover:bg-gray-200">
+                    <i class="fas fa-arrow-left text-3xl" style="color: #1554de;"></i>
+                </button>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold flex-grow">Group Tasks (Local)</h1>
+            <div class="header-right-btn"></div>
+        </div>
+
+        <div class="flex-grow flex flex-col items-center p-4 w-full">
+            <div id="groupSetupSection" class="floating-card w-full max-w-md p-6 mt-20">
+                <h2 class="text-2xl font-bold mb-4 text-[#1554de]">Manage Groups</h2>
+                
+                <div class="mb-8">
+                    <p class="text-lg font-semibold mb-3 text-[#1554de]">Create New Group:</p>
+                    <input type="text" id="newGroupNameInput" placeholder="Enter group name" class="w-full p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white mb-4" style="color: #1554de; border: 1px solid #1554de;">
+                    <button id="createGroupBtn" class="bg-[#1554de] text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg w-full">Create Group</button>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-lg font-semibold mb-3 text-[#1554de]">Join Existing Group (Local ID):</p>
+                    <input type="text" id="joinGroupCodeInput" placeholder="Enter join code" class="w-full p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white mb-4" style="color: #1554de; border: 1px solid #1554de;">
+                    <button id="joinGroupBtn" class="bg-[#1554de] text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg w-full">Join Group</button>
+                </div>
+            </div>
+
+            <div id="currentGroupSection" class="floating-card w-full max-w-md p-6 mt-8 hidden">
+                <h2 class="text-2xl font-bold mb-4 text-[#1554de]">Current Group: <span id="currentGroupName"></span></h2>
+                <p class="text-md mb-2 text-[#1554de]">Join Code: <span id="currentGroupCode" class="font-semibold"></span></p>
+                <p class="text-md mb-4 text-[#1554de]">Host: <span id="currentGroupHost"></span></p>
+
+                <div class="mb-4">
+                    <p class="text-md font-semibold mb-2 text-[#1554de]">Members (Simulated):</p>
+                    <ul id="groupMembersList" class="list-disc list-inside text-left text-[#1554de] pl-4"></ul>
+                </div>
+
+                <div id="hostPermissionsToggle" class="flex items-center justify-between mb-6 hidden">
+                    <span class="text-lg font-semibold text-[#1554de]">Allow others to add/edit tasks:</span>
+                    <label class="switch">
+                        <input type="checkbox" id="allowEditsToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div class="flex mb-6 space-x-2">
+                    <input type="text" id="newGroupTaskInput" placeholder="Add a group task" class="flex-grow p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" style="color: #1554de; border: 1px solid #1554de;">
+                    <button id="addGroupTaskBtn" class="bg-[#1554de] text-white px-6 py-3 rounded-lg shadow-md hover:opacity-90 transition-colors duration-200 font-semibold">Add</button>
+                </div>
+
+                <div id="groupTaskListWrapper" class="flex-grow overflow-y-auto w-full max-w-md">
+                    <div id="groupTaskList" class="space-y-4">
+                        <p class="text-[#1554de] text-center" id="noGroupTasksMessage">No group tasks yet.</p>
+                    </div>
+                </div>
+
+                <button id="leaveGroupBtn" class="mt-8 bg-red-600 text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg w-full">Leave Group</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsScreen" class="screen flex-col">
+        <div class="header">
+            <div class="header-left-btn">
+                <button id="backBtnSettings" class="p-2 rounded-md hover:bg-gray-200">
+                    <i class="fas fa-arrow-left text-3xl" style="color: #1554de;"></i>
+                </button>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold flex-grow">Settings</h1>
+            <div class="header-right-btn"></div>
+        </div>
+
+        <div class="flex-grow flex flex-col items-center p-4 w-full">
+            <div class="floating-card w-full max-w-md p-6 mt-20">
+                <p class="text-lg mb-4 font-bold text-[#1554de]">Show Tasks on Lock Screen</p>
+                <div class="flex items-center space-x-6 mb-8">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="lockScreenSetting" value="yes" class="hidden" checked>
+                        <span class="custom-radio" data-radio-group="lockScreenSetting" data-value="yes"></span>
+                        <span class="text-lg ml-2 text-[#1554de]">Yes</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="lockScreenSetting" value="no" class="hidden">
+                        <span class="custom-radio" data-radio-group="lockScreenSetting" data-value="no"></span>
+                        <span class="text-lg ml-2 text-[#1554de]">No</span>
+                    </label>
+                </div>
+
+                <p class="text-lg mb-4 font-bold text-[#1554de]">Notification Time</p>
+                <div class="space-y-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="notificationTime" value="30_minutes" class="hidden" checked>
+                        <span class="custom-radio" data-radio-group="notificationTime" data-value="30_minutes"></span>
+                        <span class="text-lg ml-3 text-[#1554de]">30 Minutes</span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="notificationTime" value="1_hour" class="hidden">
+                        <span class="custom-radio" data-radio-group="notificationTime" data-value="1_hour"></span>
+                        <span class="text-lg ml-3 text-[#1554de]">1 Hour</span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="notificationTime" value="2_hours" class="hidden">
+                        <span class="custom-radio" data-radio-group="notificationTime" data-value="2_hours"></span>
+                        <span class="text-lg ml-3 text-[#1554de]">2 Hours</span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="notificationTime" value="3_hours" class="hidden">
+                        <span class="custom-radio" data-radio-group="notificationTime" data-value="3_hours"></span>
+                        <span class="text-lg ml-3 text-[#1554de]">3 Hours</span>
+                    </label>
+                </div>
+                <button id="saveNotificationTimeBtn" class="mt-8 w-full bg-[#1554de] text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg font-semibold">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,432 @@
+/* Body Styles: Sets global font, background, and text colors */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-image: url('images/karya.background.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: #1554de;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* Applying Abril Fatface to specific titles */
+#splashScreen h1, 
+#authScreen h1, 
+#classCodeScreen h1, 
+#settingsScreen h1, 
+#addTaskModalContent h3, 
+#ideaInboxScreen h1, 
+#streakHistoryScreen h1, 
+#focusModeScreen h1, 
+#timeBasedSuggestionsScreen h1, 
+#groupTasksScreen h1,
+#weeklyReportScreen h1 /* Added Weekly Report */
+{
+    font-family: 'Abril Fatface', cursive;
+}
+
+/* Screen Visibility Control: Base styles for all screens */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 1s ease-in-out, visibility 0s linear 1s;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Active Screen State */
+.screen.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 1s ease-in-out, visibility 0s linear 0s;
+    z-index: 10;
+    overflow-y: auto;
+}
+
+/* Base z-index for inactive screens */
+#splashScreen, #authScreen, #todoListScreen, #groupTasksScreen, #settingsScreen, #historyScreen, #ideaInboxScreen, #focusModeScreen, #weeklyReportScreen {
+    z-index: 1;
+}
+
+/* Active screen gets higher z-index */
+#splashScreen.active, #authScreen.active, #todoListScreen.active, #groupTasksScreen.active, #settingsScreen.active, #historyScreen.active, #ideaInboxScreen.active, #focusModeScreen.active, #weeklyReportScreen.active {
+    z-index: 10;
+}
+
+/* Header styling */
+.screen .header {
+    background-color: #fdfbcf;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    flex-shrink: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+}
+
+.screen .header h1 {
+    flex-grow: 1;
+    text-align: center;
+    margin: 0;
+}
+
+.screen .header .header-left-btn,
+.screen .header .header-right-btn {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.screen .header .header-left-btn { justify-content: flex-start; }
+.screen .header .header-right-btn { justify-content: flex-end; }
+
+/* Header text rotation */
+.header-text-rotate {
+    opacity: 1;
+    transition: opacity 1.5s ease-in-out;
+}
+.header-text-rotate.fade-out-text {
+    opacity: 0;
+}
+
+/* Sidebar Menu */
+.sidebar {
+    background-color: #fdfbcf;
+    color: #1554de;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(100%);
+    z-index: 1000;
+}
+.sidebar.open { transform: translateX(0); }
+
+.overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 990;
+}
+
+/* Custom Radio Button Styling */
+.custom-radio {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #1554de;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease-in-out;
+}
+.custom-radio.checked, .custom-radio.green-checked {
+    background-color: #1554de;
+    border-color: #1554de;
+}
+.custom-radio.checked::after, .custom-radio.green-checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: white;
+}
+
+/* Task Checkbox Styling */
+.task-checkbox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid white;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+.task-checkbox.completed {
+    background-color: #1554de;
+    border-color: #1554de;
+}
+.task-checkbox.completed .check-icon {
+    color: white;
+    font-size: 14px;
+}
+
+/* Sub-step checkbox styling */
+.substep-checkbox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid #1554de;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+.substep-checkbox.completed {
+    background-color: #1554de;
+    border-color: #1554de;
+}
+.substep-checkbox.completed .check-icon {
+    color: white;
+    font-size: 12px;
+}
+
+/* Icons & Text Colors */
+#menuBtn .fas { color: #1554de; }
+#sidebarMenu ul li button { color: #1554de; }
+#sidebarMenu h2 { color: #1554de; }
+
+/* Input field styling */
+input[type="text"], input[type="date"], input[type="time"], input[type="datetime-local"], textarea {
+    background-color: white;
+    color: #1554de;
+    border: 1px solid #1554de;
+}
+input::placeholder, textarea::placeholder {
+    color: #1554de;
+    opacity: 0.7;
+}
+input:focus, textarea:focus {
+    outline: none;
+    border-color: #1554de;
+    box-shadow: 0 0 0 2px rgba(21, 84, 222, 0.2);
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(30%) sepia(90%) saturate(700%) hue-rotate(200deg) brightness(80%) contrast(100%);
+}
+
+/* Floating Card Containers */
+.floating-card {
+    background-color: white;
+    border: 2px solid #1554de;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 100%;
+}
+.floating-card + .floating-card { margin-top: 1.5rem; }
+
+.floating-card-inside-list {
+    background-color: transparent;
+    border: none;
+    border-radius: 1rem;
+    padding: 0;
+    box-shadow: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Task List Item Styling */
+#taskList .task-item-container {
+    background-color: white;
+    border: 2px solid #1554de;
+    color: #1554de;
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, color 0.3s ease-in-out;
+    margin-bottom: 1rem;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+#taskList .task-item-container.completed-task {
+    background-color: #1554de;
+    border-color: white;
+    color: white;
+}
+#taskList .task-item-container.completed-task span { color: #FDC056; }
+#taskList .task-item-container.completed-task .delete-task-btn .fas,
+#taskList .task-item-container.completed-task .edit-task-btn .fas,
+#taskList .task-item-container.completed-task .focus-session-btn .fas { color: white; }
+#taskList .task-item-container.completed-task .text-sm { color: white; }
+
+#taskList span { color: inherit; }
+#taskList span.line-through { opacity: 0.6; }
+
+/* Buttons */
+.delete-task-btn .fas { color: inherit; }
+.delete-task-btn:hover .fas { color: #ff0000; }
+
+.edit-task-btn, .focus-session-btn {
+    background-color: transparent;
+    color: inherit;
+    border: none;
+    padding: 0.25rem;
+    border-radius: 50%;
+    font-size: 1rem;
+    transition: background-color 0.2s ease-in-out;
+}
+.edit-task-btn:hover, .focus-session-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Validation Messages */
+#classCodeValidationMessage.text-green-600 { color: #22c55e; }
+#classCodeValidationMessage.text-red-600 { color: #ef4444; }
+
+/* Auth Screen Fade In */
+#authScreen .fade-in-element {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none;
+}
+#authScreen .fade-in-element.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Add Task Modal */
+#addTaskModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+#addTaskModal.open { display: flex; }
+
+#addTaskModalContent {
+    background-color: white;
+    border: 2px solid #1554de;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    color: #1554de;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+#addTaskModalContent label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    text-align: left;
+}
+#addTaskModalContent input, #addTaskModalContent textarea {
+    width: 100%;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+}
+#addTaskModalContent .button-group {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+#addTaskModalContent .button-group button {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: opacity 0.2s ease-in-out;
+}
+#addTaskModalContent #saveTaskBtn { background-color: #1554de; color: white; }
+#addTaskModalContent #cancelAddTaskBtn { background-color: #ef4444; color: white; }
+
+/* Date Option Buttons */
+.date-option-label {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    border: 1px solid #1554de;
+    color: #1554de;
+    text-align: center;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+input[type="radio"][name="taskDueDate"]:checked + .date-option-label {
+    background-color: #1554de;
+    color: white;
+}
+
+/* Study Length Radio Buttons */
+.study-length-option-label {
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    border: 1px solid #1554de;
+    color: #1554de;
+    text-align: center;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    display: inline-block;
+}
+input[type="radio"][name="studyLength"]:checked + .study-length-option-label {
+    background-color: #1554de;
+    color: white;
+}
+
+/* Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;; left: 0; right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px; width: 26px;
+  left: 4px; bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+input:checked + .slider { background-color: #1554de; }
+input:focus + .slider { box-shadow: 0 0 1px #1554de; }
+input:checked + .slider:before { transform: translateX(26px); }
