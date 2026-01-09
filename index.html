@@ -51,10 +51,27 @@
     <div id="addTaskModal" class="hidden">
         <div id="addTaskModalContent">
             <h3 class="text-2xl font-bold mb-4">Add New Task</h3>
+            
             <div class="modal-input-card">
                 <label for="modalTaskNameInput">Task Name:</label>
                 <input type="text" id="modalTaskNameInput" placeholder="Add your task">
             </div>
+
+            <div class="modal-input-card mb-4">
+                <label class="block mb-2 font-bold">Priority:</label>
+                <select id="modalPriorityInput" class="w-full p-2 rounded border border-[#1554de] text-[#1554de] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="low">Low (Blue)</option>
+                    <option value="medium" selected>Medium (Blue)</option>
+                    <option value="high">High (Orange)</option>
+                    <option value="urgent">Urgent (Red)</option>
+                </select>
+            </div>
+
+            <div class="modal-input-card mb-4">
+                <label for="modalEstTimeInput" class="block mb-2 font-bold">Estimated Duration (Minutes):</label>
+                <input type="number" id="modalEstTimeInput" placeholder="e.g. 30" class="w-full p-2 rounded border border-[#1554de] text-[#1554de] focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
             <div class="modal-input-card">
                 <label class="block mb-2 font-bold">Due Date or Interval:</label>
                 <div class="flex space-x-2 mb-2">
@@ -63,6 +80,7 @@
                     <input type="radio" name="dueDateType" id="dueDateTypeInterval" value="time_period" class="hidden">
                     <label for="dueDateTypeInterval" class="date-option-label">Time Period</label>
                 </div>
+                
                 <div id="singleDateOptions">
                     <div class="flex space-x-2 mb-2">
                         <input type="radio" name="taskDueDate" id="dueDateToday" value="today" class="hidden" checked>
@@ -74,6 +92,7 @@
                     </div>
                     <input type="date" id="modalTaskDateInput" class="hidden"> 
                 </div>
+
                 <div id="intervalOptions" class="hidden">
                     <label for="modalBeginningDateTimeInput">Beginning Time/Date:</label>
                     <input type="datetime-local" id="modalBeginningDateTimeInput" class="mb-2">
@@ -81,14 +100,17 @@
                     <input type="datetime-local" id="modalEndingDateTimeInput" class="mb-2">
                 </div>
             </div>
+
             <div class="modal-input-card">
                 <label for="modalTaskTimeInput">Time (Optional):</label>
                 <input type="time" id="modalTaskTimeInput">
             </div>
+
             <div class="modal-input-card">
                 <label for="modalSubstepsInput">Sub-steps (one per line):</label>
                 <textarea id="modalSubstepsInput" rows="4" placeholder="e.g. Step 1 (30 min)" class="w-full p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" style="color: #1554de; border: 1px solid #1554de;"></textarea>
             </div>
+
             <div class="button-group">
                 <button id="saveTaskBtn">Save Task</button>
                 <button id="cancelAddTaskBtn">Cancel</button>
@@ -102,11 +124,13 @@
 
     <div id="authScreen" class="screen p-4">
         <h1 class="text-3xl md:text-4xl font-bold mb-8">Welcome to Karya</h1>
-        <p class="text-xl mb-12">Your Local Productivity Hub</p>
+        <p class="text-xl mb-12 italic">"A smarter way to do your day."</p>
         <div class="w-full max-w-sm flex flex-col space-y-4">
-            <button id="continueWithEmailBtn" class="bg-[#1554de] text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg w-full fade-in-element active">
-                Enter App (Local Storage)
+            <button id="googleSignInBtn" class="bg-white text-gray-700 border border-gray-300 py-3 px-6 rounded-full shadow-md hover:bg-gray-50 transition-colors duration-200 text-lg w-full fade-in-element active flex items-center justify-center font-bold">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6 mr-3" alt="Google Logo">
+                Sign in with Google
             </button>
+            <p class="text-sm text-[#1554de] mt-4 opacity-70">Sync tasks & groups across devices</p>
         </div>
     </div>
 
@@ -139,9 +163,9 @@
                     <li><button id="settingsMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-cog mr-3"></i> Settings</button></li>
                     <li><button id="historyMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-history mr-3"></i> History</button></li>
                     <li><button id="groupTasksMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-users mr-3"></i> Group Tasks</button></li>
-                    <li><button id="focusModeMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-hourglass-half mr-3"></i> Focus Mode</button></li>
+                    <li><button id="focusModeMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-lock mr-3"></i> Lock In Mode</button></li>
                     <li><button id="weeklyReportMenuItem" class="flex items-center text-xl hover:text-blue-600"><i class="fas fa-chart-bar mr-3"></i> Weekly Report</button></li>
-                    <li><button id="signOutMenuItem" class="flex items-center text-xl text-red-600 hover:text-red-700"><i class="fas fa-sign-out-alt mr-3"></i> Reset Data</button></li>
+                    <li><button id="signOutMenuItem" class="flex items-center text-xl text-red-600 hover:text-red-700"><i class="fas fa-sign-out-alt mr-3"></i> Sign Out</button></li>
                 </ul>
             </div>
         </div>
@@ -151,6 +175,7 @@
             <div id="streakDisplay" class="floating-card w-full max-w-md mb-4 text-center text-2xl font-bold text-[#FDC056] mt-20">
                 🔥 <span id="currentStreakCount">0</span>-day streak!
             </div>
+            
             <div id="addTaskInputCard" class="floating-card w-full max-w-md mt-8 mb-8"> 
                 <div class="flex mb-6 space-x-2">
                     <input type="text" id="newTaskInput" placeholder="Add your task" class="flex-grow p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" style="color: #1554de; border: 1px solid #1554de;">
@@ -158,6 +183,7 @@
                 </div>
                 <p class="text-[#1554de] text-center mt-2 hidden" id="noTasksMessageInputSection">You haven't added any tasks yet</p>
             </div>
+
             <div id="ideaInboxSectionHome" class="floating-card w-full max-w-md mb-8">
                 <h2 class="text-xl font-bold mb-4 text-[#1554de] text-left">Quick Ideas</h2>
                 <div class="flex space-x-2 mb-4">
@@ -169,6 +195,7 @@
                     <p class="text-[#1554de] text-center text-sm" id="noIdeasMessageHome">No ideas captured yet.</p>
                 </div>
             </div>
+
             <div id="taskListWrapper" class="flex-grow overflow-y-auto w-full max-w-md">
                 <div id="taskListContentCard" class="floating-card-inside-list"> 
                     <div id="taskList" class="space-y-4">
@@ -176,7 +203,7 @@
                     </div>
                 </div>
             </div>
-            <p class="text-[#1554de] text-sm mt-4">User ID: <span id="userIdDisplay">Local User</span></p>
+            <p class="text-[#1554de] text-sm mt-4">User: <span id="userIdDisplay">Guest</span></p>
         </div>
     </div>
 
@@ -241,12 +268,12 @@
                     <i class="fas fa-arrow-left text-3xl" style="color: #1554de;"></i>
                 </button>
             </div>
-            <h1 class="text-3xl md:text-4xl font-bold flex-grow">Focus Mode</h1>
+            <h1 class="text-3xl md:text-4xl font-bold flex-grow">Lock In Mode</h1>
             <div class="header-right-btn"></div>
         </div>
         <div class="flex-grow flex flex-col items-center p-4 w-full justify-center">
             <div id="focusSetupCard" class="floating-card w-full max-w-md text-center p-6 mt-20">
-                <h2 class="text-2xl font-bold mb-4 text-[#1554de]">Set Up Your Focus Session</h2>
+                <h2 class="text-2xl font-bold mb-4 text-[#1554de]">Set Up Your Lock In Session</h2>
                 <div class="mb-6">
                     <p class="text-lg font-semibold mb-3 text-[#1554de]">Study Length:</p>
                     <div class="flex flex-wrap justify-center gap-2">
@@ -264,12 +291,12 @@
                     <input type="number" id="customStudyLengthInput" placeholder="Min" class="hidden w-24 mt-3 p-2 rounded-lg text-center text-lg border-2 border-[#1554de] text-[#1554de]">
                 </div>
                 <div class="mb-6">
-                    <label for="focusTaskSelect" class="block text-lg font-semibold mb-3 text-[#1554de]">Optional Task to Focus On:</label>
+                    <label for="focusTaskSelect" class="block text-lg font-semibold mb-3 text-[#1554de]">Optional Task to Lock In On:</label>
                     <select id="focusTaskSelect" class="w-full p-3 rounded-lg text-lg border-2 border-[#1554de] text-[#1554de] bg-white">
                         <option value="">Optional: Select a Task</option>
                     </select>
                 </div>
-                <button id="setFocusBtn" class="bg-[#1554de] text-white py-3 px-8 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg font-semibold">Set Focus</button>
+                <button id="setFocusBtn" class="bg-[#1554de] text-white py-3 px-8 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg font-semibold">Lock In</button>
             </div>
 
             <div id="activeFocusSession" class="floating-card w-full max-w-md text-center p-6 mt-8 hidden">
@@ -291,7 +318,7 @@
                     <i class="fas fa-arrow-left text-3xl" style="color: #1554de;"></i>
                 </button>
             </div>
-            <h1 class="text-3xl md:text-4xl font-bold flex-grow">Group Tasks (Local)</h1>
+            <h1 class="text-3xl md:text-4xl font-bold flex-grow">Group Tasks (Synced)</h1>
             <div class="header-right-btn"></div>
         </div>
 
@@ -306,7 +333,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <p class="text-lg font-semibold mb-3 text-[#1554de]">Join Existing Group (Local ID):</p>
+                    <p class="text-lg font-semibold mb-3 text-[#1554de]">Join Existing Group (Code):</p>
                     <input type="text" id="joinGroupCodeInput" placeholder="Enter join code" class="w-full p-3 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white mb-4" style="color: #1554de; border: 1px solid #1554de;">
                     <button id="joinGroupBtn" class="bg-[#1554de] text-white py-3 px-6 rounded-full shadow-md hover:opacity-90 transition-colors duration-200 text-lg w-full">Join Group</button>
                 </div>
@@ -318,7 +345,7 @@
                 <p class="text-md mb-4 text-[#1554de]">Host: <span id="currentGroupHost"></span></p>
 
                 <div class="mb-4">
-                    <p class="text-md font-semibold mb-2 text-[#1554de]">Members (Simulated):</p>
+                    <p class="text-md font-semibold mb-2 text-[#1554de]">Members:</p>
                     <ul id="groupMembersList" class="list-disc list-inside text-left text-[#1554de] pl-4"></ul>
                 </div>
 

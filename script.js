@@ -1,13 +1,74 @@
-// --- Global App State Variables ---
+// ==========================================
+// KARYA APP - MAIN LOGIC (Hybrid Architecture)
+// Personal Data: Local Storage
+// Group Data: Firebase Firestore
+// ==========================================
+
+// --- Firebase Imports (Using CDN for browser compatibility) ---
+// --- Firebase Imports (Using CDN for browser compatibility) ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, query, where, getDocs, arrayUnion } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-analytics.js";
+
+// --- YOUR FIREBASE CONFIGURATION ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDiQXL2BzooiQ1VHqfcg6deGvgO0-tBnTE",
+  authDomain: "karya-app-470d6.firebaseapp.com",
+  projectId: "karya-app-470d6",
+  storageBucket: "karya-app-470d6.firebasestorage.app",
+  messagingSenderId: "702895611244",
+  appId: "1:702895611244:web:a79153c48121c60f292749",
+  measurementId: "G-N1QKRK71RY"
+};
+
+// --- Firebase Initialization ---
+let app, db, auth, analytics;
+let isFirebaseReady = false;
+
+try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    analytics = getAnalytics(app);
+    isFirebaseReady = true;
+    console.log("✅ Firebase initialized successfully.");
+    
+    // Listen for auth state changes to update UI automatically
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            currentUserEmail = user.email;
+            if(userIdDisplay) userIdDisplay.textContent = user.displayName || user.email.split('@')[0];
+            
+            // If user logs in while on Auth Screen, move them to the App
+            if (currentScreen === 'authScreen') {
+                 renderScreen('todoListScreen');
+            }
+        } else {
+            currentUserId = null;
+            if(userIdDisplay) userIdDisplay.textContent = 'Guest';
+        }
+    });
+
+} catch (e) {
+    console.error("Error initializing Firebase:", e);
+    // Fallback so the app doesn't crash completely
+    alert("Firebase Error: " + e.message);
+}
+
+// --- Global App State ---
 let currentScreen = 'splash'; 
 let editingTaskId = null; 
 let convertingIdeaId = null; 
 let currentUserId = null; 
+let currentUserEmail = null;
 
-// Local Group State
+// Group State
 let currentGroup = null; 
+let groupUnsubscribe = null; // To stop listening when leaving group
 
-// History of visited screens for back navigation
+// Navigation History
 let screenHistory = [];
 let headerRotationInterval;
 
@@ -16,20 +77,18 @@ let mockTasks = [];
 let mockIdeas = []; 
 let nextIdeaId = 1; 
 
-// Focus Mode variables
+// Lock In Mode variables
 let focusTimerInterval = null;
 let focusTimeRemaining = 25 * 60; 
 let currentFocusTask = null; 
 
-// Streak Tracking variables 
+// Streak Tracking 
 let dailyCompletionRecords = []; 
 let currentStreak = 0;
-
-// Set to store IDs of tasks for which notifications have already been sent in the current session
 let notifiedOverdueTasks = new Set();
 
 
-// --- DOM Element References ---
+// --- DOM Elements ---
 const splashScreen = document.getElementById('splashScreen'); 
 const authScreen = document.getElementById('authScreen');
 const todoListScreen = document.getElementById('todoListScreen');
@@ -39,7 +98,8 @@ const historyScreen = document.getElementById('historyScreen');
 const focusModeScreen = document.getElementById('focusModeScreen');
 const weeklyReportScreen = document.getElementById('weeklyReportScreen');
 
-const continueWithEmailBtn = document.getElementById('continueWithEmailBtn');
+// Auth Button
+const googleSignInBtn = document.getElementById('googleSignInBtn');
 
 const menuBtn = document.getElementById('menuBtn');
 const sidebarMenu = document.getElementById('sidebarMenu');
@@ -52,15 +112,18 @@ const groupTasksMenuItem = document.getElementById('groupTasksMenuItem');
 const weeklyReportMenuItem = document.getElementById('weeklyReportMenuItem');
 const signOutMenuItem = document.getElementById('signOutMenuItem');
 
+// Task Inputs
 const newTaskInput = document.getElementById('newTaskInput');
 const addTaskBtn = document.getElementById('addTaskBtn');
 const taskList = document.getElementById('taskList');
 const noTasksMessage = document.getElementById('noTasksMessage');
 const userIdDisplay = document.getElementById('userIdDisplay');
 
-// Add task modal elements
+// Modal Elements
 const addTaskModal = document.getElementById('addTaskModal');
 const modalTaskNameInput = document.getElementById('modalTaskNameInput');
+const modalPriorityInput = document.getElementById('modalPriorityInput');
+const modalEstTimeInput = document.getElementById('modalEstTimeInput');
 const modalTaskDateInput = document.getElementById('modalTaskDateInput');
 const modalTaskTimeInput = document.getElementById('modalTaskTimeInput');
 const modalBeginningDateTimeInput = document.getElementById('modalBeginningDateTimeInput');
@@ -68,6 +131,8 @@ const modalEndingDateTimeInput = document.getElementById('modalEndingDateTimeInp
 const modalSubstepsInput = document.getElementById('modalSubstepsInput');
 const saveTaskBtn = document.getElementById('saveTaskBtn');
 const cancelAddTaskBtn = document.getElementById('cancelAddTaskBtn');
+
+// Date Radio Buttons
 const dueDateTypeSingle = document.getElementById('dueDateTypeSingle');
 const dueDateTypeInterval = document.getElementById('dueDateTypeInterval');
 const dueDateToday = document.getElementById('dueDateToday');
@@ -76,34 +141,29 @@ const dueDateOther = document.getElementById('dueDateOther');
 const singleDateOptions = document.getElementById('singleDateOptions');
 const intervalOptions = document.getElementById('intervalOptions');
 
-// History Screen elements 
+// Screens Specific Elements
 const previousTaskList = document.getElementById('previousTaskList');
 const noPreviousTasksMessage = document.getElementById('noPreviousTasksMessage');
 const streakHistoryList = document.getElementById('streakHistoryList');
 const noStreakHistoryMessage = document.getElementById('noStreakHistoryMessage');
 const currentStreakCount = document.getElementById('currentStreakCount');
 
-// Weekly Report Screen elements
-const backBtnWeeklyReport = document.getElementById('backBtnWeeklyReport');
 const weeklyTotalCount = document.getElementById('weeklyTotalCount');
 const weeklyReportList = document.getElementById('weeklyReportList');
 const noWeeklyDataMessage = document.getElementById('noWeeklyDataMessage');
 
-// Idea Inbox Home Section elements 
 const newIdeaInputHome = document.getElementById('newIdeaInputHome');
 const addIdeaBtnHome = document.getElementById('addIdeaBtnHome');
 const ideaListHome = document.getElementById('ideaListHome');
 const noIdeasMessageHome = document.getElementById('noIdeasMessageHome');
 const toggleIdeaListBtn = document.getElementById('toggleIdeaListBtn');
 
-
-// Focus Mode Screen elements
+// Lock In Mode Elements
 const timerDisplay = document.getElementById('timerDisplay');
 const startFocusBtnActive = document.getElementById('startFocusBtnActive');
 const pauseFocusBtnActive = document.getElementById('pauseFocusBtnActive');
 const resetFocusBtnActive = document.getElementById('resetFocusBtnActive');
 const focusTaskDisplay = document.getElementById('focusTaskDisplay');
-const backBtnFocusMode = document.getElementById('backBtnFocusMode');
 const focusSetupCard = document.getElementById('focusSetupCard');
 const activeFocusSessionCard = document.getElementById('activeFocusSession');
 const studyLengthRadios = document.querySelectorAll('input[name="studyLength"]');
@@ -111,7 +171,7 @@ const customStudyLengthInput = document.getElementById('customStudyLengthInput')
 const focusTaskSelect = document.getElementById('focusTaskSelect');
 const setFocusBtn = document.getElementById('setFocusBtn');
 
-// Group Tasks Screen elements 
+// Group Elements
 const groupSetupSection = document.getElementById('groupSetupSection');
 const currentGroupSection = document.getElementById('currentGroupSection');
 const newGroupNameInput = document.getElementById('newGroupNameInput');
@@ -123,29 +183,30 @@ const currentGroupCode = document.getElementById('currentGroupCode');
 const currentGroupHost = document.getElementById('currentGroupHost');
 const groupMembersList = document.getElementById('groupMembersList');
 const hostPermissionsToggle = document.getElementById('hostPermissionsToggle');
-const allowEditsToggle = document.getElementById('allowEditsToggle');
 const newGroupTaskInput = document.getElementById('newGroupTaskInput');
 const addGroupTaskBtn = document.getElementById('addGroupTaskBtn');
 const groupTaskList = document.getElementById('groupTaskList');
 const noGroupTasksMessage = document.getElementById('noGroupTasksMessage');
 const leaveGroupBtn = document.getElementById('leaveGroupBtn');
-const backBtnGroupTasks = document.getElementById('backBtnGroupTasks');
 
 const saveNotificationTimeBtn = document.getElementById('saveNotificationTimeBtn');
 
+// Custom Modal
 const customModal = document.getElementById('customModal');
 const modalMessage = document.getElementById('modalMessage');
 const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 const modalCancelBtn = document.getElementById('modalCancelBtn');
 
 const headerTaskNameDisplay = document.getElementById('headerTaskName');
-const noTasksMessageInputSection = document.getElementById('noTasksMessageInputSection');
 const backBtnTodoList = document.getElementById('backBtnTodoList');
 const backBtnSettings = document.getElementById('backBtnSettings');
 const backBtnHistory = document.getElementById('backBtnHistory');
+const backBtnFocusMode = document.getElementById('backBtnFocusMode');
+const backBtnGroupTasks = document.getElementById('backBtnGroupTasks');
+const backBtnWeeklyReport = document.getElementById('backBtnWeeklyReport');
 
 
-// --- Local Storage Helpers ---
+// --- Local Storage Helpers (Personal Data) ---
 
 function loadLocalData() {
     // Load Personal Tasks
@@ -153,9 +214,19 @@ function loadLocalData() {
     if (tasksJSON) {
         mockTasks = JSON.parse(tasksJSON);
     } else {
-        // Default starter tasks
+        // Starter Task
         mockTasks = [
-            { id: '1', text: 'Welcome to Karya!', completed: false, date: getFormattedDate(new Date()), time: '10:00', type: 'single', substeps: [] }
+            { 
+                id: '1', 
+                text: 'Welcome to Karya!', 
+                priority: 'medium',
+                estimatedTime: 15,
+                completed: false, 
+                date: getFormattedDate(new Date()), 
+                time: '10:00', 
+                type: 'single', 
+                substeps: [] 
+            }
         ];
         saveTasksLocally();
     }
@@ -187,14 +258,47 @@ function saveStreakLocally() {
     localStorage.setItem('karya_streaks', JSON.stringify(dailyCompletionRecords));
 }
 
-// --- Group Local Storage Helpers ---
-function getAllGroups() {
-    const groupsJSON = localStorage.getItem('karya_groups');
-    return groupsJSON ? JSON.parse(groupsJSON) : [];
+// --- Auth Functions (Firebase) ---
+
+async function handleGoogleSignIn() {
+    if (!isFirebaseReady) {
+        showModal("Firebase is not initialized. Check console for errors.");
+        return;
+    }
+
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+        // onAuthStateChanged handles the rest
+    } catch (error) {
+        console.error("Login Failed:", error);
+        showModal("Login failed: " + error.message);
+    }
 }
 
-function saveGroups(groups) {
-    localStorage.setItem('karya_groups', JSON.stringify(groups));
+async function handleSignOut() {
+    const confirmed = await showModal("Sign out? This will clear the current session.", true, true, "Sign Out", "Cancel");
+    if(confirmed) {
+        if (isFirebaseReady) {
+            await signOut(auth);
+        }
+        
+        // Clear session state
+        clearInterval(headerRotationInterval); 
+        currentUserId = null; 
+        userIdDisplay.textContent = 'Guest';
+        screenHistory = []; 
+        notifiedOverdueTasks.clear(); 
+        currentGroup = null; 
+        
+        // Detach Firestore listener if active
+        if (groupUnsubscribe) {
+            groupUnsubscribe(); 
+            groupUnsubscribe = null;
+        }
+        
+        renderScreen('authScreen'); 
+    }
 }
 
 // --- Main App Logic ---
@@ -247,10 +351,13 @@ function openAddTaskModal(taskId = null, ideaIdToConvert = null) {
     }
     newTaskInput.value = ''; 
 
+    // Reset fields
     modalTaskTimeInput.value = ''; 
     modalBeginningDateTimeInput.value = '';
     modalEndingDateTimeInput.value = '';
     modalSubstepsInput.value = ''; 
+    modalPriorityInput.value = 'medium'; 
+    modalEstTimeInput.value = ''; 
 
     dueDateTypeSingle.checked = true; 
     dueDateToday.checked = true; 
@@ -271,6 +378,9 @@ function openEditTaskModal(taskId) {
 
     addTaskModal.classList.add('open');
     modalTaskNameInput.value = taskToEdit.text;
+    modalPriorityInput.value = taskToEdit.priority || 'medium';
+    modalEstTimeInput.value = taskToEdit.estimatedTime || '';
+
     modalSubstepsInput.value = taskToEdit.substeps.map(s => {
         let line = s.text;
         if (s.timeRequired) {
@@ -380,7 +490,6 @@ function renderScreen(screenId, isBackNavigation = false) {
     if (targetScreen) {
         targetScreen.classList.add('visible'); 
         targetScreen.offsetWidth; 
-        
         targetScreen.classList.add('active'); 
         targetScreen.style.pointerEvents = 'auto'; 
 
@@ -399,7 +508,7 @@ function renderScreen(screenId, isBackNavigation = false) {
             generateWeeklyReport();
         } else if (screenId === 'focusModeScreen') {
             populateFocusTaskSelect(); 
-            
+            // Resume timer if active
             if (currentFocusTask && focusTimerInterval) { 
                 focusSetupCard.classList.add('hidden');
                 activeFocusSessionCard.classList.remove('hidden');
@@ -417,17 +526,16 @@ function renderScreen(screenId, isBackNavigation = false) {
                 activeFocusSessionCard.classList.add('hidden');
                 resetFocusTimer(false); 
                 if(currentFocusTask){
-                    focusTaskDisplay.textContent = `Focusing on: ${currentFocusTask.text}`;
+                    focusTaskDisplay.textContent = `Locked in on: ${currentFocusTask.text}`;
                 } else {
                     focusTaskDisplay.textContent = 'No task selected';
                 }
             }
         } else if (screenId === 'groupTasksScreen') {
-            if (currentGroup) {
-                showCurrentGroupSection();
-                renderGroupTasks();
-            } else {
+            if (!currentGroup) {
                 showGroupSetupSection();
+            } else {
+                showCurrentGroupSection();
             }
         }
     }
@@ -447,21 +555,13 @@ function goBack() {
 
 function updateBackButtons() {
     document.querySelectorAll('[id^="backBtn"]').forEach(btn => btn.classList.add('hidden'));
-
     if (screenHistory.length > 0) {
-        if (currentScreen === 'todoListScreen') {
-            backBtnTodoList.classList.remove('hidden');
-        } else if (currentScreen === 'groupTasksScreen') { 
-            backBtnGroupTasks.classList.remove('hidden');
-        } else if (currentScreen === 'settingsScreen') {
-            backBtnSettings.classList.remove('hidden');
-        } else if (currentScreen === 'historyScreen') { 
-            backBtnHistory.classList.remove('hidden');
-        } else if (currentScreen === 'focusModeScreen') {
-            backBtnFocusMode.classList.remove('hidden');
-        } else if (currentScreen === 'weeklyReportScreen') {
-            backBtnWeeklyReport.classList.remove('hidden');
-        }
+        if (currentScreen === 'todoListScreen') backBtnTodoList.classList.remove('hidden');
+        else if (currentScreen === 'groupTasksScreen') backBtnGroupTasks.classList.remove('hidden');
+        else if (currentScreen === 'settingsScreen') backBtnSettings.classList.remove('hidden');
+        else if (currentScreen === 'historyScreen') backBtnHistory.classList.remove('hidden');
+        else if (currentScreen === 'focusModeScreen') backBtnFocusMode.classList.remove('hidden');
+        else if (currentScreen === 'weeklyReportScreen') backBtnWeeklyReport.classList.remove('hidden');
     }
 }
 
@@ -475,10 +575,20 @@ function closeSidebar() {
     menuOverlay.classList.add('hidden');
 }
 
+// --- Task Display Logic ---
+
 function displayTasks(tasks) {
     taskList.innerHTML = '';
     const activeTasks = tasks.filter(t => !t.completed);
     
+    // Sort tasks: Urgent > High > Medium > Low
+    const priorityWeight = { 'urgent': 4, 'high': 3, 'medium': 2, 'low': 1 };
+    activeTasks.sort((a, b) => {
+        const weightA = priorityWeight[a.priority] || 2;
+        const weightB = priorityWeight[b.priority] || 2;
+        return weightB - weightA;
+    });
+
     if (activeTasks.length === 0) {
         noTasksMessage.classList.remove('hidden');
         taskList.appendChild(noTasksMessage);
@@ -487,7 +597,13 @@ function displayTasks(tasks) {
         activeTasks.forEach(task => {
             const taskElement = document.createElement('div');
             const taskItemClass = 'task-item-container';
-            taskElement.className = `flex flex-col p-3 rounded-lg border-2 ${taskItemClass}`;
+            
+            // Priority Borders
+            let borderColorClass = 'border-[#1554de]'; 
+            if (task.priority === 'high') borderColorClass = 'border-[#FDC056]'; 
+            if (task.priority === 'urgent') borderColorClass = 'border-red-600'; 
+            
+            taskElement.className = `flex flex-col p-3 rounded-lg border-2 ${borderColorClass} ${taskItemClass}`;
             
             const completedSubsteps = task.substeps ? task.substeps.filter(s => s.completed).length : 0;
             const totalSubsteps = task.substeps ? task.substeps.length : 0;
@@ -496,50 +612,15 @@ function displayTasks(tasks) {
             let dateTimeDisplay = '';
             if (task.type === 'single') {
                 const taskDate = new Date(task.date);
-                const today = new Date();
-                const tomorrow = new Date();
-                tomorrow.setDate(today.getDate() + 1);
-
-                const isToday = taskDate.toDateString() === today.toDateString();
-                const isTomorrow = taskDate.toDateString() === tomorrow.toDateString();
-                
-                const taskDateTime = new Date(`${task.date}T${task.time || '00:00'}`);
-                const now = new Date();
-                const isPastDueTime = (taskDateTime < now) && !task.completed; 
-                
                 const time = task.time ? new Date(`2000-01-01T${task.time}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-
-                if (isToday) {
-                    dateTimeDisplay = `Today @ ${time}`;
-                    if (isPastDueTime) dateTimeDisplay = `<span class="text-red-400">Overdue:</span> Today @ ${time}`; 
-                } else if (isTomorrow) {
-                    dateTimeDisplay = `Tomorrow @ ${time}`;
-                } else {
-                    dateTimeDisplay = `${taskDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} @ ${time}`;
-                    if (isPastDueTime) dateTimeDisplay = `<span class="text-red-400">Overdue:</span> ${taskDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} @ ${time}`;
-                }
+                dateTimeDisplay = `${taskDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} @ ${time}`;
             } else if (task.type === 'time_period') {
-                const startDateTime = task.beginningDateTime ? new Date(task.beginningDateTime) : null;
-                const endDateTime = task.endingDateTime ? new Date(task.endingDateTime) : null;
-
-                let startDisplay = startDateTime ? `${startDateTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} @ ${startDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}` : '';
-                let endDisplay = endDateTime ? `${endDateTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} @ ${endDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}` : '';
-                
-                if (startDisplay && endDisplay) {
-                    dateTimeDisplay = `${startDisplay} - ${endDisplay}`;
-                } else if (startDisplay) {
-                    dateTimeDisplay = `Starts: ${startDisplay}`;
-                } else if (endDisplay) {
-                    dateTimeDisplay = `Ends: ${endDisplay}`;
-                } else {
-                    dateTimeDisplay = 'Time Period Task';
-                }
-
-                if (endDateTime && endDateTime < new Date() && !task.completed) {
-                    dateTimeDisplay = `<span class="text-red-400">Overdue:</span> ${dateTimeDisplay}`;
-                }
+                dateTimeDisplay = 'Time Period';
             }
             
+            const priorityLabel = task.priority && task.priority !== 'medium' ? `<span class="text-xs font-bold uppercase ml-2 ${task.priority === 'urgent' ? 'text-red-600' : 'text-orange-500'}">${task.priority}</span>` : '';
+            const estimateDisplay = task.estimatedTime ? `<span class="text-xs ml-2 opacity-75"><i class="fas fa-clock"></i> ${task.estimatedTime}m</span>` : '';
+
             taskElement.innerHTML = `
                 <div class="flex items-center justify-between w-full">
                     <div class="flex items-center flex-grow">
@@ -547,11 +628,13 @@ function displayTasks(tasks) {
                             ${task.completed ? '<i class="fas fa-check check-icon"></i>' : ''}
                         </button>
                         <span class="text-lg ml-3 ${task.completed ? 'line-through opacity-60' : ''}">${task.text}</span>
+                        ${priorityLabel}
+                        ${estimateDisplay}
                         ${substepProgress}
                     </div>
                     <div class="flex items-center space-x-2">
-                        <button class="p-1 rounded-full focus-session-btn" data-id="${task.id}" title="Start Focus Session">
-                            <i class="fas fa-hourglass-start"></i>
+                        <button class="p-1 rounded-full focus-session-btn" data-id="${task.id}" title="Start Lock In Session">
+                            <i class="fas fa-lock"></i>
                         </button>
                         <button class="p-1 rounded-full edit-task-btn" data-id="${task.id}" title="Edit Task">
                             <i class="fas fa-edit"></i>
@@ -580,6 +663,7 @@ function displayTasks(tasks) {
             taskList.appendChild(taskElement);
         });
 
+        // Listeners
         document.querySelectorAll('.task-checkbox').forEach(btn => {
             btn.onclick = async () => {
                 const id = btn.dataset.id;
@@ -587,7 +671,6 @@ function displayTasks(tasks) {
                 handleToggleComplete(id, completed);
             };
         });
-
         document.querySelectorAll('.delete-task-btn').forEach(btn => {
             btn.onclick = async () => {
                 const id = btn.dataset.id;
@@ -634,24 +717,10 @@ function displayPreviousTasks() {
             const taskItemClass = 'task-item-container completed-task'; 
             taskElement.className = `flex flex-col p-3 rounded-lg border-2 ${taskItemClass}`;
             
-            let dateTimeDisplay = '';
-            if (task.type === 'single') {
-                const taskDate = new Date(task.date);
-                const time = task.time ? new Date(`2000-01-01T${task.time}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-                dateTimeDisplay = `${taskDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} @ ${time}`;
-            } else if (task.type === 'time_period') {
-                dateTimeDisplay = 'Time Period Task';
-            }
-            
-            const completedSubsteps = task.substeps ? task.substeps.filter(s => s.completed).length : 0;
-            const totalSubsteps = task.substeps ? task.substeps.length : 0;
-            const substepProgress = totalSubsteps > 0 ? `<span class="text-xs opacity-70 ml-2">(${completedSubsteps}/${totalSubsteps} steps)</span>` : '';
-
             taskElement.innerHTML = `
                 <div class="flex items-center justify-between w-full">
                     <div class="flex items-center flex-grow">
                         <span class="text-lg line-through opacity-60">${task.text}</span>
-                        ${substepProgress}
                     </div>
                     <button class="p-1 rounded-full delete-task-btn" data-id="${task.id}" title="Delete Permanently">
                         <i class="fas fa-times"></i>
@@ -659,7 +728,6 @@ function displayPreviousTasks() {
                 </div>
                 <div class="text-sm mt-1 w-full pl-0">
                     Completed on: ${new Date(task.completedAt || Date.now()).toLocaleDateString('en-US')}
-                    <br>${dateTimeDisplay}
                 </div>
             `;
             previousTaskList.appendChild(taskElement);
@@ -682,8 +750,11 @@ function displayPreviousTasks() {
 
 async function saveTask() {
     const taskText = modalTaskNameInput.value.trim();
+    const priority = modalPriorityInput.value;
+    const estTime = parseInt(modalEstTimeInput.value) || 0; 
     const substepsText = modalSubstepsInput.value.trim();
     const dueDateType = document.querySelector('input[name="dueDateType"]:checked').value;
+    
     let taskDate = null;
     let taskTime = null;
     let taskBeginningDateTime = null;
@@ -737,6 +808,8 @@ async function saveTask() {
             task.id === editingTaskId ? { 
                 ...task, 
                 text: taskText, 
+                priority: priority,
+                estimatedTime: estTime,
                 date: taskDate, 
                 time: taskTime,
                 beginningDateTime: taskBeginningDateTime,
@@ -751,6 +824,8 @@ async function saveTask() {
         mockTasks.push({ 
             id: newId, 
             text: taskText, 
+            priority: priority,
+            estimatedTime: estTime,
             completed: false,
             date: taskDate, 
             time: taskTime,
@@ -784,10 +859,6 @@ async function handleDeleteTask(id) {
     mockTasks = mockTasks.filter(task => task.id !== id);
     saveTasksLocally();
     displayTasks(mockTasks);
-    
-    const activeTasks = mockTasks.filter(t => !t.completed);
-    headerTaskNameDisplay.textContent = activeTasks.length > 0 ? activeTasks[0].text : 'List';
-    
     startHeaderRotation(); 
     showModal("Task deleted.");
 }
@@ -799,7 +870,6 @@ async function handleToggleComplete(id, completed) {
             if (newCompletedStatus && task.substeps) {
                 task.substeps.forEach(sub => sub.completed = true);
             }
-            
             const completedAt = newCompletedStatus ? new Date().toISOString() : null;
             return { ...task, completed: newCompletedStatus, completedAt: completedAt };
         }
@@ -835,33 +905,6 @@ function handleToggleSubstepComplete(taskId, substepIndex) {
     saveTasksLocally();
     displayTasks(mockTasks);
     checkStreak(); 
-}
-
-async function handleSignOut() {
-    const confirmed = await showModal("Reset data and return to welcome screen? This clears the current session view but data remains in local storage.", true, true, "Reset", "Cancel");
-    if(confirmed) {
-        clearInterval(headerRotationInterval); 
-        currentUserId = null; 
-        userIdDisplay.textContent = 'Not authenticated';
-        screenHistory = []; 
-        notifiedOverdueTasks.clear(); 
-        currentGroup = null; 
-        renderScreen('authScreen'); 
-    }
-}
-
-function initializeCustomRadios(container) {
-    container.querySelectorAll('.custom-radio').forEach(radio => {
-        radio.onclick = () => {
-            const groupName = radio.dataset.radioGroup;
-            container.querySelectorAll(`.custom-radio[data-radio-group="${groupName}"]`).forEach(otherRadio => {
-                otherRadio.classList.remove('checked', 'green-checked');
-                otherRadio.previousElementSibling.checked = false;
-            });
-            radio.classList.add(radio.classList.contains('green-checked') ? 'green-checked' : 'checked');
-            radio.previousElementSibling.checked = true;
-        };
-    });
 }
 
 // --- Header Rotation Logic ---
@@ -900,44 +943,7 @@ function startHeaderRotation() {
     }, rotationDuration); 
 }
 
-function checkOverdueAndPrompt() {
-    const activeTasks = mockTasks.filter(t => !t.completed);
-    const overdueTasks = activeTasks.filter(task => {
-        let isOverdue = false;
-        if (task.type === 'single' && task.date) {
-            const taskDateTime = new Date(`${task.date}T${task.time || '00:00'}`);
-            isOverdue = taskDateTime < new Date();
-        } else if (task.type === 'time_period' && task.endingDateTime) {
-            const endingDateTime = new Date(task.endingDateTime);
-            isOverdue = endingDateTime < new Date();
-        }
-        return isOverdue && !notifiedOverdueTasks.has(task.id);
-    });
-
-    if (overdueTasks.length > 0) {
-        let notificationMessage = "You have overdue tasks:\n";
-        overdueTasks.forEach(task => {
-            notificationMessage += `- ${task.text}\n`;
-            notifiedOverdueTasks.add(task.id); 
-        });
-
-        showModal(`${notificationMessage}\nHave you completed these tasks?`, true, true, 'Mark Completed', 'No').then(confirmCompletion => {
-            if (confirmCompletion) {
-                mockTasks = mockTasks.map(task => {
-                    if (overdueTasks.some(overdue => overdue.id === task.id)) {
-                        return { ...task, completed: true, completedAt: new Date().toISOString() };
-                    }
-                    return task;
-                });
-                saveTasksLocally();
-                displayTasks(mockTasks); 
-                updateDailyCompletion(new Date());
-            }
-        });
-    }
-}
-
-// --- Idea Inbox Functions ---
+// --- Idea Inbox ---
 function displayIdeasHome() {
     ideaListHome.innerHTML = '';
     if (mockIdeas.length === 0) {
@@ -996,7 +1002,7 @@ async function addIdeaHome() {
     showModal("Idea added to inbox!");
 }
 
-// --- Streak Tracking Functions ---
+// --- Streak Tracking ---
 function getTodayDateString() {
     return getFormattedDate(new Date());
 }
@@ -1010,13 +1016,11 @@ function checkStreak() {
 
     for (let i = 0; i < dailyCompletionRecords.length; i++) {
         const recordDate = new Date(dailyCompletionRecords[i].date);
-        
         if (i === 0) {
             tempStreak = 1;
         } else {
             const dayBefore = new Date(prevDate);
             dayBefore.setDate(dayBefore.getDate() + 1); 
-
             if (recordDate.toDateString() === dayBefore.toDateString()) {
                 tempStreak++;
             } else if (recordDate.toDateString() !== prevDate.toDateString()) {
@@ -1036,7 +1040,6 @@ function checkStreak() {
 function updateDailyCompletion(date) {
     const dateStr = getFormattedDate(date);
     const existingRecordIndex = dailyCompletionRecords.findIndex(record => record.date === dateStr);
-
     const completedTasksToday = mockTasks.filter(task => 
         task.completed && getFormattedDate(new Date(task.completedAt)) === dateStr
     ).length;
@@ -1074,23 +1077,19 @@ function displayStreakHistory() {
     }
 }
 
-// --- Weekly Report Function ---
+// --- Weekly Report ---
 function generateWeeklyReport() {
     weeklyReportList.innerHTML = '';
-    
-    // 1. Calculate the date range (Last 7 days)
     const now = new Date();
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(now.getDate() - 7);
     
-    // 2. Filter tasks: Completed AND completedAt is within the last 7 days
     const weeklyTasks = mockTasks.filter(task => {
         if (!task.completed || !task.completedAt) return false;
         const completionDate = new Date(task.completedAt);
         return completionDate >= oneWeekAgo && completionDate <= now;
     });
 
-    // 3. Update Big Counter
     weeklyTotalCount.textContent = weeklyTasks.length;
 
     if (weeklyTasks.length === 0) {
@@ -1101,19 +1100,14 @@ function generateWeeklyReport() {
 
     noWeeklyDataMessage.classList.add('hidden');
 
-    // 4. Group by Day
     const tasksByDay = {};
     weeklyTasks.forEach(task => {
         const dateObj = new Date(task.completedAt);
         const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        
-        if (!tasksByDay[dateStr]) {
-            tasksByDay[dateStr] = [];
-        }
+        if (!tasksByDay[dateStr]) tasksByDay[dateStr] = [];
         tasksByDay[dateStr].push(task);
     });
 
-    // 5. Render the list (Sorted by most recent day)
     const sortedDays = Object.keys(tasksByDay).sort((a, b) => new Date(b) - new Date(a));
 
     sortedDays.forEach(day => {
@@ -1139,7 +1133,7 @@ function generateWeeklyReport() {
     });
 }
 
-// --- Focus Mode Functions ---
+// --- Lock In Mode ---
 function populateFocusTaskSelect() {
     focusTaskSelect.innerHTML = '<option value="">Optional: Select a Task</option>'; 
     const activeTasks = mockTasks.filter(task => !task.completed);
@@ -1193,7 +1187,7 @@ function updateFocusTimerDisplay() {
     timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     
     if (currentFocusTask) {
-        focusTaskDisplay.textContent = `Focusing on: ${currentFocusTask.text}`;
+        focusTaskDisplay.textContent = `Locked in on: ${currentFocusTask.text}`;
     } else {
         focusTaskDisplay.textContent = `No task selected`;
     }
@@ -1214,7 +1208,7 @@ function startFocusTimer() {
             focusTimerInterval = null;
             
             if (currentFocusTask) {
-                showModal(`Focus session completed! Did you finish "${currentFocusTask.text}"?`, true, true, 'Yes, mark complete', 'Not yet').then(complete => {
+                showModal(`Lock In session completed! Did you finish "${currentFocusTask.text}"?`, true, true, 'Yes, mark complete', 'Not yet').then(complete => {
                    if(complete) {
                        handleToggleComplete(currentFocusTask.id, false);
                        currentFocusTask = null;
@@ -1222,7 +1216,7 @@ function startFocusTimer() {
                    resetFocusUI();
                 });
             } else {
-                showModal("Focus session completed!");
+                showModal("Lock In session completed!");
                 resetFocusUI();
             }
         }
@@ -1240,7 +1234,6 @@ function resetFocusTimer(showMsg = true) {
     clearInterval(focusTimerInterval);
     focusTimerInterval = null;
     focusTimeRemaining = 25 * 60; 
-    
     resetFocusUI();
 }
 
@@ -1260,7 +1253,7 @@ function resetFocusUI() {
     focusTaskSelect.value = ''; 
 }
 
-// --- Local Group Functions ---
+// --- FIREBASE GROUP FUNCTIONS (Synced) ---
 
 function showGroupSetupSection() {
     groupSetupSection.classList.remove('hidden');
@@ -1272,91 +1265,101 @@ function showGroupSetupSection() {
 function showCurrentGroupSection() {
     groupSetupSection.classList.add('hidden');
     currentGroupSection.classList.remove('hidden');
-    updateCurrentGroupDisplay();
 }
 
-function createGroup() {
+async function createGroup() {
+    if (!isFirebaseReady) { showModal("Syncing not enabled. Add Firebase config."); return; }
+    
     const groupName = newGroupNameInput.value.trim();
     if (!groupName) {
         showModal("Please enter a group name.");
         return;
     }
 
-    const newGroup = {
-        id: 'group-' + Date.now(),
-        name: groupName,
-        joinCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
-        hostId: 'local-user', 
-        members: [{ uid: 'local-user', name: 'You' }], 
-        allowEdits: true,
-        tasks: []
-    };
-
-    const groups = getAllGroups();
-    groups.push(newGroup);
-    saveGroups(groups);
-
-    currentGroup = newGroup;
-    showModal(`Group "${groupName}" created! Code: ${newGroup.joinCode}`);
-    showCurrentGroupSection();
-    renderGroupTasks();
+    const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const newGroupId = 'group-' + Date.now();
+    
+    try {
+        await setDoc(doc(db, "groups", newGroupId), {
+            name: groupName,
+            joinCode: joinCode,
+            hostId: currentUserId || 'anon',
+            members: [currentUserId || 'anon'],
+            tasks: []
+        });
+        
+        showModal(`Group "${groupName}" created! Code: ${joinCode}`);
+        joinGroupWithCode(joinCode); 
+    } catch (e) {
+        console.error("Error creating group: ", e);
+        showModal("Error creating group.");
+    }
 }
 
 function joinGroup() {
+    if (!isFirebaseReady) { showModal("Syncing not enabled. Add Firebase config."); return; }
+
     const code = joinGroupCodeInput.value.trim().toUpperCase();
     if (!code) {
         showModal("Enter a code.");
         return;
     }
+    joinGroupWithCode(code);
+}
 
-    const groups = getAllGroups();
-    const group = groups.find(g => g.joinCode === code);
+async function joinGroupWithCode(code) {
+    const q = query(collection(db, "groups"), where("joinCode", "==", code));
+    const querySnapshot = await getDocs(q);
 
-    if (!group) {
-        showModal("Group not found (Remember, groups are local to this browser!).");
+    if (querySnapshot.empty) {
+        showModal("Group not found.");
         return;
     }
 
-    currentGroup = group;
-    // Simulate joining if not already in (though locally you are the only user)
-    if (!currentGroup.members.some(m => m.uid === 'local-user')) {
-        currentGroup.members.push({ uid: 'local-user', name: 'You' });
-        // Update storage
-        const idx = groups.findIndex(g => g.id === group.id);
-        groups[idx] = currentGroup;
-        saveGroups(groups);
-    }
+    const groupDoc = querySnapshot.docs[0];
+    const groupId = groupDoc.id;
+
+    if (groupUnsubscribe) groupUnsubscribe();
+
+    groupUnsubscribe = onSnapshot(doc(db, "groups", groupId), (docSnapshot) => {
+        if (docSnapshot.exists()) {
+            currentGroup = { id: docSnapshot.id, ...docSnapshot.data() };
+            updateCurrentGroupDisplay(currentGroup);
+            renderGroupTasks(currentGroup.tasks || []);
+        } else {
+            showModal("Group was deleted.");
+            leaveGroup();
+        }
+    });
 
     showCurrentGroupSection();
-    renderGroupTasks();
 }
 
 function leaveGroup() {
     showModal("Leave this group?", true, true).then(confirm => {
         if (confirm) {
+            if (groupUnsubscribe) groupUnsubscribe(); 
             currentGroup = null;
             showGroupSetupSection();
         }
     });
 }
 
-function updateCurrentGroupDisplay() {
-    if (!currentGroup) return;
-    currentGroupName.textContent = currentGroup.name;
-    currentGroupCode.textContent = currentGroup.joinCode;
-    currentGroupHost.textContent = "Local User (You)";
+function updateCurrentGroupDisplay(group) {
+    currentGroupName.textContent = group.name;
+    currentGroupCode.textContent = group.joinCode;
+    currentGroupHost.textContent = "Synced Group"; 
     
     groupMembersList.innerHTML = '';
-    currentGroup.members.forEach(m => {
-        const li = document.createElement('li');
-        li.textContent = m.name;
-        groupMembersList.appendChild(li);
-    });
+    const li = document.createElement('li');
+    li.textContent = `Active Members: ${group.members ? group.members.length : 1}`;
+    groupMembersList.appendChild(li);
 
     hostPermissionsToggle.classList.remove('hidden'); 
 }
 
-function addGroupTask() {
+async function addGroupTask() {
+    if (!currentGroup) return;
     const text = newGroupTaskInput.value.trim();
     if (!text) return;
 
@@ -1366,28 +1369,26 @@ function addGroupTask() {
         completed: false
     };
 
-    currentGroup.tasks.push(newTask);
-    
-    // Save to local storage
-    const groups = getAllGroups();
-    const idx = groups.findIndex(g => g.id === currentGroup.id);
-    if (idx !== -1) {
-        groups[idx] = currentGroup;
-        saveGroups(groups);
+    try {
+        const groupRef = doc(db, "groups", currentGroup.id);
+        await updateDoc(groupRef, {
+            tasks: arrayUnion(newTask)
+        });
+        newGroupTaskInput.value = '';
+    } catch (e) {
+        console.error("Error adding task: ", e);
+        showModal("Failed to add task.");
     }
-
-    newGroupTaskInput.value = '';
-    renderGroupTasks();
 }
 
-function renderGroupTasks() {
+function renderGroupTasks(tasks) {
     groupTaskList.innerHTML = '';
-    if (!currentGroup || currentGroup.tasks.length === 0) {
+    if (!tasks || tasks.length === 0) {
         noGroupTasksMessage.classList.remove('hidden');
         groupTaskList.appendChild(noGroupTasksMessage);
     } else {
         noGroupTasksMessage.classList.add('hidden');
-        currentGroup.tasks.forEach(task => {
+        tasks.forEach(task => {
             const el = document.createElement('div');
             const isCompleted = task.completed;
             el.className = `flex items-center justify-between p-3 rounded-lg border-2 mb-2 ${isCompleted ? 'completed-task' : 'border-[#1554de] bg-white'}`;
@@ -1403,7 +1404,6 @@ function renderGroupTasks() {
             groupTaskList.appendChild(el);
         });
 
-        // Add listeners
         groupTaskList.querySelectorAll('.task-checkbox').forEach(btn => {
             btn.onclick = () => toggleGroupTask(btn.dataset.id);
         });
@@ -1413,25 +1413,29 @@ function renderGroupTasks() {
     }
 }
 
-function toggleGroupTask(taskId) {
-    const task = currentGroup.tasks.find(t => t.id === taskId);
-    if (task) {
-        task.completed = !task.completed;
-        const groups = getAllGroups();
-        const idx = groups.findIndex(g => g.id === currentGroup.id);
-        groups[idx] = currentGroup;
-        saveGroups(groups);
-        renderGroupTasks();
+async function toggleGroupTask(taskId) {
+    if (!currentGroup) return;
+    const updatedTasks = currentGroup.tasks.map(t => {
+        if (t.id === taskId) return { ...t, completed: !t.completed };
+        return t;
+    });
+
+    try {
+        await updateDoc(doc(db, "groups", currentGroup.id), { tasks: updatedTasks });
+    } catch (e) {
+        console.error("Error toggling task:", e);
     }
 }
 
-function deleteGroupTask(taskId) {
-    currentGroup.tasks = currentGroup.tasks.filter(t => t.id !== taskId);
-    const groups = getAllGroups();
-    const idx = groups.findIndex(g => g.id === currentGroup.id);
-    groups[idx] = currentGroup;
-    saveGroups(groups);
-    renderGroupTasks();
+async function deleteGroupTask(taskId) {
+    if (!currentGroup) return;
+    const updatedTasks = currentGroup.tasks.filter(t => t.id !== taskId);
+    
+    try {
+        await updateDoc(doc(db, "groups", currentGroup.id), { tasks: updatedTasks });
+    } catch (e) {
+        console.error("Error deleting task:", e);
+    }
 }
 
 // --- Kayra AI Voice Assistant Logic ---
@@ -1452,11 +1456,11 @@ let recognition;
 let synth = window.speechSynthesis;
 let isListening = false;
 
-// 1. Setup Speech Recognition
+// Setup Speech Recognition
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
-    recognition.continuous = false; // Stop after one sentence
+    recognition.continuous = false; 
     recognition.lang = 'en-US';
     recognition.interimResults = false;
 
@@ -1469,8 +1473,6 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
 
     recognition.onend = () => {
         isListening = false;
-        // If overlay is still open and we didn't just speak, maybe restart?
-        // For simple interaction, we stop and wait for processing.
     };
 
     recognition.onresult = async (event) => {
@@ -1483,7 +1485,6 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             return;
         }
 
-        // Send to Gemini
         const reply = await askGemini(transcript);
         voiceResponseText.textContent = reply;
         voiceStatus.textContent = "Speaking...";
@@ -1498,7 +1499,7 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     console.error("Browser does not support Web Speech API");
 }
 
-// 2. Open/Close Logic
+// Open/Close Logic
 if (startVoiceBtn) {
     startVoiceBtn.addEventListener('click', () => {
         const key = localStorage.getItem('gemini_api_key');
@@ -1521,7 +1522,7 @@ function closeVoiceOverlay() {
     synth.cancel();
 }
 
-// 3. API Key Management
+// API Key Management
 if (openApiKeyModalBtn) openApiKeyModalBtn.addEventListener('click', () => apiKeyModal.classList.remove('hidden'));
 if (cancelApiKeyBtn) cancelApiKeyBtn.addEventListener('click', () => apiKeyModal.classList.add('hidden'));
 
@@ -1537,19 +1538,46 @@ if (saveApiKeyBtn) {
     });
 }
 
-// 4. Gemini API Call
+// Gemini API Call
 async function askGemini(prompt) {
     const apiKey = localStorage.getItem('gemini_api_key');
     if (!apiKey) return "Please set your API key in settings.";
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
+    // Build context with Priorities and Estimates
+    const activeTasks = mockTasks.filter(t => !t.completed);
+    const taskContext = activeTasks.map(t => 
+        `- ${t.text} (Priority: ${t.priority || 'Medium'}, Est: ${t.estimatedTime || '?'} min)`
+    ).join('\n');
+
+    // Calculate Velocity
+    const totalDays = dailyCompletionRecords.length || 1;
+    const totalCompleted = dailyCompletionRecords.reduce((acc, curr) => acc + curr.tasksCompleted, 0);
+    const velocity = Math.round(totalCompleted / totalDays) || 0;
+
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const systemPrompt = `You are an AI named Kayra. The current date is ${today}. Respond like a friendly assistant. Keep answers brief (under 2 sentences) for speech synthesis.`;
+    
+    // System Prompt with Slogan
+    const systemPrompt = `You are Kayra, a productivity AI. Slogan: "A smarter way to do your day." Today is ${today}.
+    
+    USER STATS:
+    - Average Velocity: ${velocity} tasks/day.
+    
+    CURRENT TASKS:
+    ${taskContext}
+
+    RULES:
+    1. Respond briefly (under 2 sentences) for speech synthesis.
+    2. If the user asks to "Plan my day", prioritize 'Urgent' and 'High' tasks first.
+    3. Warn the user if they have too many tasks compared to their velocity.
+    4. Do NOT answer questions about sports, trivia, or non-productivity topics. Politely refuse.
+    
+    User Query: ${prompt}`;
 
     const data = {
         contents: [{
-            parts: [{ text: systemPrompt + "\nUser: " + prompt }]
+            parts: [{ text: systemPrompt }]
         }]
     };
 
@@ -1572,7 +1600,7 @@ async function askGemini(prompt) {
     }
 }
 
-// 5. Text to Speech
+// Text to Speech
 function speakText(text) {
     if (synth.speaking) {
         console.error('speechSynthesis.speaking');
@@ -1580,16 +1608,19 @@ function speakText(text) {
     }
     if (text !== '') {
         const utterThis = new SpeechSynthesisUtterance(text);
+        
+        const voices = synth.getVoices();
+        const preferredVoice = voices.find(voice => 
+            voice.name.includes('Google US English') || 
+            voice.name.includes('Zira') || 
+            voice.name.includes('Samantha')
+        );
+        if (preferredVoice) utterThis.voice = preferredVoice;
+
         utterThis.onend = function (event) {
             voiceStatus.textContent = "Kayra is listening...";
-            try { recognition.start(); } catch(e) {} // Resume listening after speaking
+            try { recognition.start(); } catch(e) {} 
         };
-        utterThis.onerror = function (event) {
-            console.error('SpeechSynthesisUtterance.onerror');
-        };
-        // Optional: Select a specific voice
-        // const voices = synth.getVoices();
-        // utterThis.voice = voices[0]; 
         synth.speak(utterThis);
     }
 }
@@ -1618,10 +1649,7 @@ window.onload = function() {
     loadLocalData();
 
     // Listeners
-    continueWithEmailBtn.addEventListener('click', () => {
-        currentUserId = 'local-user';
-        renderScreen('todoListScreen');
-    });
+    googleSignInBtn.addEventListener('click', handleGoogleSignIn);
 
     menuBtn.addEventListener('click', toggleSidebar);
     menuOverlay.addEventListener('click', closeSidebar);

@@ -1,4 +1,4 @@
-/* Body Styles: Sets global font, background, and text colors */
+/* --- Global Reset & Body Styles --- */
 html, body {
     margin: 0;
     padding: 0;
@@ -7,6 +7,9 @@ html, body {
 
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    /* Cream Background */
+    background-color: #fdfbcf; 
+    /* Fallback image if file missing */
     background-image: url('images/karya.background.png');
     background-size: cover;
     background-position: center;
@@ -21,24 +24,22 @@ body {
     position: relative;
 }
 
-/* Applying Abril Fatface to specific titles */
+/* --- Typography: Abril Fatface for Headers --- */
 #splashScreen h1, 
 #authScreen h1, 
-#classCodeScreen h1, 
 #settingsScreen h1, 
 #addTaskModalContent h3, 
-#ideaInboxScreen h1, 
-#streakHistoryScreen h1, 
+#ideaInboxSectionHome h2, 
+#historyScreen h1, 
 #focusModeScreen h1, 
-#timeBasedSuggestionsScreen h1, 
 #groupTasksScreen h1,
-#weeklyReportScreen h1, /* Added Weekly Report */
-#voiceStatus /* Added Voice Assistant Status */
+#weeklyReportScreen h1,
+#voiceStatus 
 {
     font-family: 'Abril Fatface', cursive;
 }
 
-/* Screen Visibility Control: Base styles for all screens */
+/* --- Screen Visibility & Transition Control --- */
 .screen {
     position: absolute;
     top: 0;
@@ -53,33 +54,28 @@ body {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: opacity 1s ease-in-out, visibility 0s linear 1s;
+    transition: opacity 0.5s ease-in-out, visibility 0s linear 0.5s; 
     overflow-y: hidden;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
 }
 
-/* Active Screen State */
 .screen.active {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition: opacity 1s ease-in-out, visibility 0s linear 0s;
+    transition: opacity 0.5s ease-in-out, visibility 0s linear 0s;
     z-index: 10;
-    overflow-y: auto;
+    overflow-y: auto; /* Enable scrolling on active screen */
 }
 
-/* Base z-index for inactive screens */
-#splashScreen, #authScreen, #todoListScreen, #groupTasksScreen, #settingsScreen, #historyScreen, #ideaInboxScreen, #focusModeScreen, #weeklyReportScreen {
+/* Z-Index Management */
+#splashScreen, #authScreen, #todoListScreen, #groupTasksScreen, #settingsScreen, #historyScreen, #focusModeScreen, #weeklyReportScreen {
     z-index: 1;
 }
+.screen.active { z-index: 10; }
 
-/* Active screen gets higher z-index */
-#splashScreen.active, #authScreen.active, #todoListScreen.active, #groupTasksScreen.active, #settingsScreen.active, #historyScreen.active, #ideaInboxScreen.active, #focusModeScreen.active, #weeklyReportScreen.active {
-    z-index: 10;
-}
-
-/* Header styling */
+/* --- Header Styling --- */
 .screen .header {
     background-color: #fdfbcf;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -109,20 +105,19 @@ body {
     align-items: center;
     justify-content: center;
 }
-
 .screen .header .header-left-btn { justify-content: flex-start; }
 .screen .header .header-right-btn { justify-content: flex-end; }
 
-/* Header text rotation */
+/* Header Text Rotation Animation */
 .header-text-rotate {
     opacity: 1;
-    transition: opacity 1.5s ease-in-out;
+    transition: opacity 1s ease-in-out;
 }
 .header-text-rotate.fade-out-text {
     opacity: 0;
 }
 
-/* Sidebar Menu */
+/* --- Sidebar Menu --- */
 .sidebar {
     background-color: #fdfbcf;
     color: #1554de;
@@ -140,82 +135,8 @@ body {
     z-index: 990;
 }
 
-/* Custom Radio Button Styling */
-.custom-radio {
-    display: inline-block;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid #1554de;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.2s ease-in-out;
-}
-.custom-radio.checked, .custom-radio.green-checked {
-    background-color: #1554de;
-    border-color: #1554de;
-}
-.custom-radio.checked::after, .custom-radio.green-checked::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: white;
-}
-
-/* Task Checkbox Styling */
-.task-checkbox {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid white;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-.task-checkbox.completed {
-    background-color: #1554de;
-    border-color: #1554de;
-}
-.task-checkbox.completed .check-icon {
-    color: white;
-    font-size: 14px;
-}
-
-/* Sub-step checkbox styling */
-.substep-checkbox {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    border: 1px solid #1554de;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-.substep-checkbox.completed {
-    background-color: #1554de;
-    border-color: #1554de;
-}
-.substep-checkbox.completed .check-icon {
-    color: white;
-    font-size: 12px;
-}
-
-/* Icons & Text Colors */
-#menuBtn .fas { color: #1554de; }
-#sidebarMenu ul li button { color: #1554de; }
-#sidebarMenu h2 { color: #1554de; }
-
-/* Input field styling */
-input[type="text"], input[type="password"], input[type="date"], input[type="time"], input[type="datetime-local"], textarea {
+/* --- Form Elements --- */
+input[type="text"], input[type="password"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"], textarea, select {
     background-color: white;
     color: #1554de;
     border: 1px solid #1554de;
@@ -224,24 +145,26 @@ input::placeholder, textarea::placeholder {
     color: #1554de;
     opacity: 0.7;
 }
-input:focus, textarea:focus {
+input:focus, textarea:focus, select:focus {
     outline: none;
     border-color: #1554de;
     box-shadow: 0 0 0 2px rgba(21, 84, 222, 0.2);
 }
+
+/* Custom Calendar Icon Color */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     filter: invert(30%) sepia(90%) saturate(700%) hue-rotate(200deg) brightness(80%) contrast(100%);
 }
 
-/* Floating Card Containers */
+/* --- Floating Cards (White containers with Blue Borders) --- */
 .floating-card {
     background-color: white;
     border: 2px solid #1554de;
     border-radius: 1rem;
     padding: 1.5rem;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     max-width: 400px;
     width: 100%;
 }
@@ -258,64 +181,44 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     flex-direction: column;
 }
 
-/* Task List Item Styling */
+/* --- Task List Item Styling --- */
 #taskList .task-item-container {
     background-color: white;
-    border: 2px solid #1554de;
+    /* Border color is set dynamically via JS (border-red-600, etc) */
     color: #1554de;
-    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, color 0.3s ease-in-out;
+    transition: all 0.3s ease-in-out;
     margin-bottom: 1rem;
-    padding: 1.5rem;
+    padding: 1rem;
     border-radius: 1rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
-#taskList .task-item-container.completed-task {
+
+/* Task Completed State */
+#taskList .task-item-container.completed-task,
+.completed-task { /* Applied to Group tasks too */
     background-color: #1554de;
-    border-color: white;
+    border-color: white !important; 
     color: white;
 }
-#taskList .task-item-container.completed-task span { color: #FDC056; }
-#taskList .task-item-container.completed-task .delete-task-btn .fas,
-#taskList .task-item-container.completed-task .edit-task-btn .fas,
-#taskList .task-item-container.completed-task .focus-session-btn .fas { color: white; }
-#taskList .task-item-container.completed-task .text-sm { color: white; }
+#taskList .task-item-container.completed-task span,
+.completed-task span { color: #FDC056 !important; } /* Gold text */
+
+#taskList .task-item-container.completed-task .fas,
+.completed-task .fas { color: white; }
+
+#taskList .task-item-container.completed-task .text-sm,
+.completed-task .text-sm { color: rgba(255, 255, 255, 0.8); }
 
 #taskList span { color: inherit; }
 #taskList span.line-through { opacity: 0.6; }
 
-/* Buttons */
-.delete-task-btn .fas { color: inherit; }
-.delete-task-btn:hover .fas { color: #ff0000; }
-
-.edit-task-btn, .focus-session-btn {
-    background-color: transparent;
-    color: inherit;
-    border: none;
-    padding: 0.25rem;
-    border-radius: 50%;
-    font-size: 1rem;
-    transition: background-color 0.2s ease-in-out;
-}
+/* Buttons inside Task Item */
+.delete-task-btn .fas:hover, .delete-group-task-btn .fas:hover { color: #ff0000; }
 .edit-task-btn:hover, .focus-session-btn:hover {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
-/* Validation Messages */
-#classCodeValidationMessage.text-green-600 { color: #22c55e; }
-#classCodeValidationMessage.text-red-600 { color: #ef4444; }
-
-/* Auth Screen Fade In */
-#authScreen .fade-in-element {
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-    pointer-events: none;
-}
-#authScreen .fade-in-element.active {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-/* Add Task Modal */
+/* --- Add Task Modal Styling --- */
 #addTaskModal {
     position: fixed;
     top: 0;
@@ -337,24 +240,29 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     padding: 1.5rem;
     width: 90%;
     max-width: 400px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     color: #1554de;
     max-height: 90vh;
-    overflow-y: auto;
+    overflow-y: auto; /* Allow scrolling on small screens */
 }
+
 #addTaskModalContent label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: bold;
     text-align: left;
 }
-#addTaskModalContent input, #addTaskModalContent textarea {
+
+#addTaskModalContent input, 
+#addTaskModalContent textarea,
+#addTaskModalContent select {
     width: 100%;
     margin-bottom: 1rem;
     padding: 0.75rem;
     border-radius: 0.5rem;
     font-size: 1rem;
 }
+
 #addTaskModalContent .button-group {
     display: flex;
     justify-content: space-around;
@@ -371,50 +279,101 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 #addTaskModalContent #saveTaskBtn { background-color: #1554de; color: white; }
 #addTaskModalContent #cancelAddTaskBtn { background-color: #ef4444; color: white; }
 
-/* Date Option Buttons */
-.date-option-label {
+/* --- Custom Checkbox & Radio Styles --- */
+.task-checkbox, .substep-checkbox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%; /* Circle */
+    border: 2px solid #1554de;
+    cursor: pointer;
+    background-color: white;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.substep-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px; /* Square for substeps */
+}
+.task-checkbox.completed, .substep-checkbox.completed {
+    background-color: #1554de;
+    border-color: #1554de;
+}
+.task-checkbox.completed .check-icon, .substep-checkbox.completed .check-icon {
+    color: white;
+    font-size: 14px;
+}
+/* Invert checkbox color when task is completed (white border on blue bg) */
+.task-item-container.completed-task .task-checkbox,
+.completed-task .task-checkbox {
+    border-color: white;
+    background-color: #1554de; 
+}
+.task-item-container.completed-task .task-checkbox.completed,
+.completed-task .task-checkbox.completed {
+    background-color: white;
+    border-color: white;
+}
+.task-item-container.completed-task .task-checkbox.completed .check-icon,
+.completed-task .task-checkbox.completed .check-icon {
+    color: #1554de;
+}
+
+/* Date Option Buttons (Radio Look-alikes) */
+.date-option-label, .study-length-option-label {
     flex: 1;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.5rem;
     border-radius: 9999px;
     cursor: pointer;
     border: 1px solid #1554de;
     color: #1554de;
     text-align: center;
+    font-size: 0.9rem;
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
 }
-input[type="radio"][name="taskDueDate"]:checked + .date-option-label {
+input[type="radio"]:checked + .date-option-label,
+input[type="radio"]:checked + .study-length-option-label {
     background-color: #1554de;
     color: white;
 }
 
-/* Study Length Radio Buttons */
-.study-length-option-label {
-    padding: 0.5rem 1rem;
-    border-radius: 9999px;
-    cursor: pointer;
-    border: 1px solid #1554de;
-    color: #1554de;
-    text-align: center;
-    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+/* Custom Circle Radio Buttons (Settings) */
+.custom-radio {
     display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #1554de;
+    cursor: pointer;
+    position: relative;
 }
-input[type="radio"][name="studyLength"]:checked + .study-length-option-label {
+.custom-radio.checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
     background-color: #1554de;
-    color: white;
 }
 
-/* Toggle Switch */
+/* Toggle Switch (Group Perms) */
 .switch {
   position: relative;
   display: inline-block;
-  width: 60px;
-  height: 34px;
+  width: 50px;
+  height: 28px;
 }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider {
   position: absolute;
   cursor: pointer;
-  top: 0;; left: 0; right: 0; bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background-color: #ccc;
   transition: .4s;
   border-radius: 34px;
@@ -422,12 +381,42 @@ input[type="radio"][name="studyLength"]:checked + .study-length-option-label {
 .slider:before {
   position: absolute;
   content: "";
-  height: 26px; width: 26px;
+  height: 20px; width: 20px;
   left: 4px; bottom: 4px;
   background-color: white;
   transition: .4s;
   border-radius: 50%;
 }
 input:checked + .slider { background-color: #1554de; }
-input:focus + .slider { box-shadow: 0 0 1px #1554de; }
-input:checked + .slider:before { transform: translateX(26px); }
+input:checked + .slider:before { transform: translateX(22px); }
+
+/* --- Google Sign-In Button Specifics --- */
+#googleSignInBtn {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+#googleSignInBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+}
+#googleSignInBtn:active {
+    transform: translateY(0);
+}
+
+/* --- Fade Animations --- */
+.fade-in-element {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+.fade-in-element.active {
+    opacity: 1;
+}
+
+/* --- Voice Overlay Pulse --- */
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); }
+    100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+#voiceOverlay .animate-pulse i {
+    animation: pulse-ring 2s infinite;
+}
