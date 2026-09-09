@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens carried over from the existing app so the converted screens
+ * match the current build exactly. This is a re-platform, not a redesign.
+ */
+@theme {
+  --color-brand: #1554de;
+  --color-brand-hover: #1044b8;
+  --color-brand-tint: #eaf0fd;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
