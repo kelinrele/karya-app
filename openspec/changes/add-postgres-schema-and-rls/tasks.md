@@ -21,7 +21,7 @@ that records the owner's membership. Corrected in
 
 ## 2. Replay the migrations
 
-- [x] 2.1 Run `npx supabase db reset` to replay both migrations from empty,
+- [x] 2.1 Run `npx supabase db reset` to replay every migration from empty,
       verified by the command completing with no SQL error. Replaying from
       empty is the point: a migration that only works against the current
       database is broken
@@ -74,13 +74,13 @@ that records the owner's membership. Corrected in
       verified by a clean `supabase db reset` followed by a clean suite run.
       Applied migrations are append-only, so nothing already committed is
       edited in place
-- [ ] 5.2 Record the outcome in `supabase/README.md` if verification changed
+- [x] 5.2 Record the outcome in `supabase/README.md` if verification changed
       any documented behaviour, verified by the file describing what the
       database actually does
-- [ ] 5.3 Mark step 2 complete in the migration plan, verified by the plan
+- [x] 5.3 Mark step 2 complete in the migration plan, verified by the plan
       naming step 3 as the next unfinished step
-- [ ] 5.4 Run `npx openspec validate add-postgres-schema-and-rls --strict`,
+- [x] 5.4 Run `npx openspec validate add-postgres-schema-and-rls --strict`,
       verified by it reporting no errors
-- [ ] 5.5 Commit the verified state with explicit paths, verified by
+- [x] 5.5 Commit the verified state with explicit paths, verified by
       `git status --short` listing only the intended files, with no `.env` and
       no build output in the index

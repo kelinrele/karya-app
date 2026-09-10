@@ -34,7 +34,7 @@ Written and committed before verification:
 
 Since verified, with the outcome:
 
-- **Both migrations replay cleanly from empty.** Seven tables, twenty-two
+- **All three migrations replay cleanly from empty.** Seven tables, twenty-two
   policies, six functions, two enum types, and the realtime publication all
   create as intended, with no table left unprotected.
 - **The verification suite passes 24 of 24**, driving the API as an anonymous

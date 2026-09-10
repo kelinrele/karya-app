@@ -202,7 +202,7 @@ work everywhere else.
 ## Migration Plan
 
 1. Start the local stack, which requires a container runtime.
-2. Replay both migrations from empty. Not against an existing database: a
+2. Replay every migration from empty. Not against an existing database: a
    migration that only works against the current state is broken.
 3. Seed data covering the awkward cases.
 4. Run the assertion suite and resolve every failure.
