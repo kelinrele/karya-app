@@ -14,6 +14,7 @@ applied anywhere other than a local machine.
 |---|---|
 | `0001_core_schema.sql` | Profiles, tasks, ideas, daily completions, plus their policies and triggers. |
 | `0002_groups.sql` | Groups, membership, group tasks, the join RPC, and Realtime publication. |
+| `0003_fix_group_insert_returning.sql` | Lets a group owner read their own group, so creating one and returning the row does not fail. |
 
 ## Rules
 
@@ -36,7 +37,7 @@ applied anywhere other than a local machine.
 
 ## Planned
 
-`0003` will add pgvector, the embedding columns on tasks and ideas, the
+`0004` will add pgvector, the embedding columns on tasks and ideas, the
 enqueueing trigger, and the job queue table. It is deliberately not written yet,
 since the embedding provider fixes the vector width and changing that later
 forces a table rewrite.
