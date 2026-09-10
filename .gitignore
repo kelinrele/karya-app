@@ -57,6 +57,5 @@ CLAUDE.md
 /.scratch/
 *.local.md
 
-# OpenSpec workflow artifacts (local only, never committed)
-openspec/
+# OpenSpec local scratch only. The specs and changes themselves are tracked.
 .openspec/

@@ -1,0 +1,80 @@
+schema: spec-driven
+
+context: |
+  Karya is a productivity app: tasks with substeps, a Pomodoro focus mode,
+  an idea inbox, streak tracking, shared group lists, and a voice assistant
+  called Kayra.
+
+  It is mid-migration. A vanilla JavaScript build (index.html, script.js,
+  style.css at the repository root) is still the live app. A React rebuild
+  lives in app/ and is being converted screen by screen. Both must keep
+  working at every commit.
+
+  Tech stack:
+  - Frontend: Vite 8, React 19, TypeScript 5.9 strict, Tailwind CSS 4.
+    TypeScript is pinned below 6.1 because typescript-eslint requires it.
+  - Backend: Supabase. Postgres 17, Row Level Security, Google OAuth,
+    Realtime. pgvector with automatic embeddings is planned but not built.
+  - Hosting: Vercel, static build plus serverless functions.
+  - AI: Vercel AI SDK only. Gemini is the current provider but must be
+    reachable solely through the SDK's provider-agnostic layer.
+  - State: TanStack Query for server state, Zustand for ephemeral UI state.
+
+  Migration order, eleven steps: 0 repo setup (done), 1 scaffold (done),
+  2 schema and RLS (in progress), 3 auth, 4 data layer, 5 screens,
+  6 groups on realtime, 7 serverless assistant route, 8 pgvector,
+  9 assistant tools, 10 cutover.
+
+  Architectural standards:
+  - Row Level Security is enabled in the same migration that creates a table.
+    The anon key is public, so policies are the only access control.
+  - auth.uid() is always wrapped as (select auth.uid()) inside policies so
+    Postgres evaluates it once per statement rather than once per row.
+  - Migrations are append-only. Corrections go in a new file, never as an
+    edit to an applied one.
+  - No client-side model API key, ever. Every AI call goes through a
+    serverless route with Zod-validated input.
+  - Never import a provider SDK directly in feature code.
+  - Guest mode persists to localStorage; signed-in users persist to Postgres.
+    One repository interface, two implementations, chosen by auth state.
+    Never branch on auth state inside a component.
+  - Preserve existing behaviour and visuals during migration. Brand #1554de.
+    This is a re-platform, not a redesign.
+  - "Commit messages use plain-English tags, not Conventional Commits. Format
+    is tag then colon then subject, where tag is one of added, fixed, tweaked,
+    cleanup, wip, notes. Subject is lowercase, a noun phrase rather than an
+    imperative, and 50 characters at most. Body wrapped at 72 explaining why,
+    never how."
+  - One logical concern per commit. Stage explicit paths, never git add . or
+    -A. Secrets never get committed; .env.example holds key names with empty
+    values.
+  - Development scripts live in scripts/ with zero dependencies, and refuse to
+    run against a non-local database.
+
+rules:
+  proposal:
+    - State plainly what already exists in the codebase versus what this
+      change adds. Never describe finished work as if it were still to do.
+    - Include a Non-goals section.
+  design:
+    - Record the reason behind each decision, not just the decision. A
+      decision without a rationale gets relitigated later.
+    - Call out the failure mode a choice is avoiding where one exists.
+  tasks:
+    - Scope tasks to work that is genuinely outstanding. If an artifact is
+      already written and committed, the task is to verify it, not write it.
+    - Every task names how it is verified.
+
+operations:
+  apply:
+    guidance:
+      - Review the staged file list before every commit and confirm it is
+        exactly the intended change. Secrets and build output never belong in
+        the index.
+      - Keep the legacy build working. The app must run at every commit.
+      - Verify database changes against a local stack replayed from empty,
+        not against an already-migrated database.
+  archive:
+    guidance:
+      - Confirm the migration plan step markers were updated to match
+        reality before archiving.
