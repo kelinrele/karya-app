@@ -2,7 +2,8 @@
  * Shared helpers for the local Supabase scripts. Zero dependencies.
  *
  * Everything talks to PostgREST and GoTrue over plain fetch rather than
- * pulling in @supabase/supabase-js, which keeps this directory install-free.
+ * pulling in @supabase/supabase-js. Only verify-realtime.mjs needs a package;
+ * the rest run on bare Node.
  */
 
 import { existsSync, readFileSync } from 'node:fs';

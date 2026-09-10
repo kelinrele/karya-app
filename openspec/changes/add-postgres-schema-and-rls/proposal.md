@@ -22,7 +22,7 @@ thing standing between one user's tasks and everybody else's.
 
 Written and committed before verification:
 
-- Two migrations, `0001_core_schema.sql` and `0002_groups.sql`, covering
+- The first two migrations, `0001_core_schema.sql` and `0002_groups.sql`, covering
   profiles, tasks, ideas, daily completions, groups, membership, and group
   tasks, with row level security enabled on every table in the same migration
   that creates it.
@@ -34,12 +34,12 @@ Written and committed before verification:
 
 Since verified, with the outcome:
 
-- **All three migrations replay cleanly from empty.** Seven tables, twenty-two
+- **Every migration replays cleanly from empty.** Seven tables, twenty-two
   policies, six functions, two enum types, and the realtime publication all
   create as intended, with no table left unprotected.
 - **Three suites pass from an empty database**: 24 of 24 access-control
   assertions driving the API as an anonymous caller and as two separate users,
-  25 of 25 constraint assertions, and 4 of 4 realtime assertions.
+  25 of 25 constraint assertions, and 7 of 7 realtime assertions.
 - **It found three real faults**, none visible from reading the SQL:
   - `0003` — the groups select policy hid a newly created group from its own
     creator, because `RETURNING` is evaluated before the `AFTER INSERT` trigger
