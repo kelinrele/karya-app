@@ -173,10 +173,12 @@ This is the most likely place for a leak in the finished system, and no
 database-level protection will catch it. It needs its own tests when step 7
 lands; the current suite does not cover it.
 
-**The schema had never executed** → Resolved. Syntax, constraint logic,
-trigger behaviour, and the realtime publication now all replay cleanly from
-empty. One fault surfaced on the first run, an evaluation-order defect in the
-groups select policy, corrected in `0003_fix_group_insert_returning.sql`.
+**The schema had never executed** → Resolved, and it was worth doing. Three
+faults surfaced, in three different areas: an evaluation-order defect in the
+groups select policy (`0003`), a forgeable completion timestamp (`0004`), and
+deletion notices reaching non-members, which no migration can fix and which is
+recorded as a stated exception instead. None was visible from reading the SQL,
+which is the argument for running it rather than reviewing it.
 
 **The verification suite was itself unproven** → Resolved, and better than
 planned. Rather than loosening a policy on purpose to watch the suite fail, it

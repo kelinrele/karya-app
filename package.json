@@ -1,0 +1,13 @@
+{
+  "name": "karya-scripts",
+  "private": true,
+  "type": "module",
+  "description": "Development scripts for the local Supabase stack. Not the application; see app/.",
+  "scripts": {
+    "verify": "node scripts/verify-rls.mjs && node scripts/verify-constraints.mjs && node scripts/verify-realtime.mjs",
+    "seed": "node scripts/seed-dev-db.mjs"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.58.0"
+  }
+}

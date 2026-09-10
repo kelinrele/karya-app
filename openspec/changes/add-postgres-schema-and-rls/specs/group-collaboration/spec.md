@@ -161,3 +161,29 @@ membership, so a non-member SHALL receive nothing.
 
 - **WHEN** a user who has left the group would otherwise receive an update
 - **THEN** no group content SHALL be delivered to them
+
+#### Scenario: A task is deleted while a non-member is subscribed
+
+- **WHEN** a task is deleted from a group and a non-member holds a live
+  subscription to task changes
+- **THEN** the non-member MAY receive notice that a record with that identifier
+  was deleted
+- **AND** they SHALL NOT learn which group it belonged to, its text, or any
+  other field
+
+**This is a stated exception, not an aspiration.** Deletion notices are the one
+case where the guarantee above does not hold, and it cannot be closed in the
+schema.
+
+Access control on the delivery stream is applied by evaluating the select
+policy against the changed row. A deletion carries only the row's identifier,
+never the columns the policy needs, so the platform cannot decide who is
+entitled to the message and delivers it to every subscriber of the table.
+Verified directly, under both replica identity settings: the behaviour is
+identical and the payload never contains more than the identifier.
+
+What leaks is therefore an opaque identifier and the fact that something was
+deleted. It is recorded here so that a client is not built assuming otherwise,
+and so nobody spends a day trying to fix it in a policy. Closing it properly
+means not subscribing to deletions at all and reconciling another way, which
+belongs to the step that builds the group screen.

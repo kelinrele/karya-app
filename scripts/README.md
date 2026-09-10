@@ -3,9 +3,23 @@
 Development scripts for the local Supabase stack. Not part of the shipped
 application; nothing here runs in production.
 
-Plain Node with **zero dependencies**. Everything talks to PostgREST and the
-auth API over `fetch` rather than pulling in a client library, so the directory
-needs no install step of its own. Node 20 or newer.
+Plain Node. Node 20 or newer.
+
+Three of the four scripts have **no dependencies at all** and talk to PostgREST
+and the auth API over `fetch`. Only `verify-realtime.mjs` needs a package,
+because hand-rolling a WebSocket protocol would fail in ways indistinguishable
+from the bug it is meant to catch. Install once at the repository root:
+
+```bash
+npm install
+```
+
+| Script | Needs an install |
+|---|---|
+| `seed-dev-db.mjs` | No |
+| `verify-rls.mjs` | No |
+| `verify-constraints.mjs` | No |
+| `verify-realtime.mjs` | Yes |
 
 ## Prerequisites
 
@@ -84,6 +98,64 @@ because an empty result is indistinguishable from a correct denial unless the
 data is known to exist. So the suite inserts B's row, checks A cannot see it,
 then confirms with B's own token that the row survived. Without that last step
 the whole suite proves nothing.
+
+## `verify-constraints.mjs`
+
+Checks what the database guarantees about its own data, as opposed to who may
+read it.
+
+```bash
+node scripts/verify-constraints.mjs
+node scripts/verify-constraints.mjs --keep    # leave the test users behind
+```
+
+Three areas. The **schedule constraint** must refuse a task carrying both a due
+date and a period, a period with no end, a period ending before it begins, and
+a whitespace-only title, and the rows must be absent afterwards: a constraint
+that errors while still writing is worse than none.
+
+**Completion time** must belong to the database. The interesting cases are the
+forged ones, sending `completed_at` on its own and smuggling it alongside an
+unrelated edit. Both were accepted before `0004`, which matters because streak
+history is derived from these timestamps and a client able to backdate them can
+manufacture a streak.
+
+The **account cascade** is subtler than it reads, because the eight foreign
+keys do not behave alike. Six cascade, but `group_tasks.created_by` and
+`completed_by` are `on delete set null`. So a task the deleted user created in
+someone else's group must survive with a null creator, while one in a group
+they owned must vanish with the group. Checking only that rows disappear would
+pass against a schema that deletes far too much.
+
+## `verify-realtime.mjs`
+
+Checks that realtime delivery respects group membership.
+
+```bash
+node scripts/verify-realtime.mjs
+```
+
+Exits `1` on a failed assertion and `3` when the test could not be established,
+which is a distinction worth having.
+
+**The positive control is the test.** Asserting that a non-member receives
+nothing proves nothing on its own, because a subscription that silently failed
+also receives nothing, and the two are indistinguishable from outside. So a
+member subscribes first and *must* receive the insert. Only then does the
+non-member's silence mean anything, and a final check confirms the member was
+still receiving during the same window.
+
+It also records a limitation rather than wishing it away. Inserts and updates
+are filtered by membership; **deletions are not, and cannot be.** A deletion
+carries only the row identifier, so the policy has no `group_id` to evaluate
+and every subscriber of the table is told. The suite asserts that this is what
+happens, and separately that nothing beyond the identifier leaks, so the day
+the platform starts filtering deletions the test will fail and say so.
+
+The positive control retries a few times. The realtime service restarts during
+`supabase db reset` and takes several seconds to start streaming, so a run
+immediately afterwards sees a healthy container that is not yet delivering.
+Exhausting the retries still reports inconclusive rather than passing.
 
 ## Known gaps
 

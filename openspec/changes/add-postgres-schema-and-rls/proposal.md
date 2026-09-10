@@ -37,15 +37,26 @@ Since verified, with the outcome:
 - **All three migrations replay cleanly from empty.** Seven tables, twenty-two
   policies, six functions, two enum types, and the realtime publication all
   create as intended, with no table left unprotected.
-- **The verification suite passes 24 of 24**, driving the API as an anonymous
-  caller and as two separate users.
-- **It found one real fault**, corrected in
-  `0003_fix_group_insert_returning.sql`. The groups select policy hid a newly
-  created group from its own creator, because `RETURNING` is evaluated before
-  the `AFTER INSERT` trigger that records the owner's membership. A plain
-  `INSERT` succeeded while `INSERT ... RETURNING` was refused, which isolated
-  it. This would have broken the client library, which calls
-  `.insert().select()` by default.
+- **Three suites pass from an empty database**: 24 of 24 access-control
+  assertions driving the API as an anonymous caller and as two separate users,
+  25 of 25 constraint assertions, and 4 of 4 realtime assertions.
+- **It found three real faults**, none visible from reading the SQL:
+  - `0003` — the groups select policy hid a newly created group from its own
+    creator, because `RETURNING` is evaluated before the `AFTER INSERT` trigger
+    that records membership. A plain `INSERT` succeeded while
+    `INSERT ... RETURNING` was refused, which isolated it. It would have broken
+    the client library, which calls `.insert().select()` by default.
+  - `0004` — completion time could be forged. The trigger was declared
+    `update of completed`, so it fired only when that column appeared in the
+    statement. A client sending `completed_at` alone, or alongside an unrelated
+    edit, had the value persist. Streak history is derived from these
+    timestamps, so this was a route to manufacturing a streak.
+  - A third finding needed no migration. Deletion notices reach non-members,
+    because delivery access control evaluates the select policy against the
+    changed row and a deletion carries only the identifier. The platform cannot
+    tell who is entitled, so it tells everyone. No schema change closes this;
+    it is recorded as a stated exception in the spec and asserted in the test,
+    together with a check that nothing beyond the identifier leaks.
 - **It also found one wrong assertion.** A DELETE blocked by a policy returns
   success with zero rows rather than a refusal, so the test expected the wrong
   failure shape. Corrected in the test, not the policy.
