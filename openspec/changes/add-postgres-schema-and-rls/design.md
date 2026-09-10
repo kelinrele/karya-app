@@ -120,6 +120,29 @@ anyone to select a group when they supply its code. That leaks: codes are six
 characters, so the whole space is enumerable, and such a policy turns the
 database into an oracle for it.
 
+### Recognise a group's owner directly, not only through membership
+
+**Why:** Added after verification, in `0003`. The select policy originally
+asked only `is_group_member(id)`, which looks complete and is not.
+
+`RETURNING` is evaluated before `AFTER INSERT` triggers fire. So when a caller
+created a group and asked for the row back, the trigger recording their
+membership had not yet run, the policy found no membership, and the row was
+hidden from the person who had just created it. A plain `INSERT` succeeded
+while `INSERT ... RETURNING` was refused, which is what isolated it.
+
+**Alternative rejected:** Moving the trigger to `BEFORE INSERT`. Not possible;
+the group row must exist before a membership row can reference it.
+
+**Alternative rejected:** Telling clients not to request the row back. The
+client library does `.insert().select()` by default, so this would mean fighting
+the ecosystem to preserve a policy that was wrong anyway.
+
+**Why the fix is also the better rule:** An owner should be able to read their
+group because they own it, not because a second table happens to record them.
+The membership clause remains for everyone else. Ownership no longer depends on
+trigger timing, which was never a property worth relying on.
+
 ### Express "forbidden" as an absent policy
 
 **Why:** Completion history is append-only. Rather than writing a delete policy
@@ -150,14 +173,17 @@ This is the most likely place for a leak in the finished system, and no
 database-level protection will catch it. It needs its own tests when step 7
 lands; the current suite does not cover it.
 
-**The schema has never executed** → Syntax, constraint logic, trigger
-behaviour, and the realtime publication are all unproven. The first replay may
-simply fail. This is precisely why the change is not already closed.
+**The schema had never executed** → Resolved. Syntax, constraint logic,
+trigger behaviour, and the realtime publication now all replay cleanly from
+empty. One fault surfaced on the first run, an evaluation-order defect in the
+groups select policy, corrected in `0003_fix_group_insert_returning.sql`.
 
-**The verification suite is itself unproven** → It has never run either. A pass
-on the first attempt should be treated with mild suspicion until at least one
-assertion has been seen to fail correctly, for instance by temporarily
-loosening a policy.
+**The verification suite was itself unproven** → Resolved, and better than
+planned. Rather than loosening a policy on purpose to watch the suite fail, it
+failed twice on its own: once on the real schema fault above, and once on an
+assertion that expected a blocked DELETE to return a refusal when a policy
+instead hides the row and reports zero rows affected. Two genuine failures for
+two different reasons is stronger evidence than a manufactured one.
 
 **Absent protection is invisible to the suite** → The assertions check the
 policies that exist. A table created later with protection left off would be

@@ -20,7 +20,7 @@ thing standing between one user's tasks and everybody else's.
 
 ## What Changes
 
-Already written and committed, pending verification:
+Written and committed before verification:
 
 - Two migrations, `0001_core_schema.sql` and `0002_groups.sql`, covering
   profiles, tasks, ideas, daily completions, groups, membership, and group
@@ -32,20 +32,30 @@ Already written and committed, pending verification:
   covering the awkward cases rather than the happy path.
 - `supabase/config.toml`, pinning Postgres 17 and the local port assignments.
 
-Outstanding, and the actual work of this change:
+Since verified, with the outcome:
 
-- Replay both migrations from empty against a live Postgres instance. Neither
-  has ever been executed. Syntax, constraint logic, trigger behaviour, and the
-  Realtime publication are all currently unproven.
-- Run the verification suite and resolve every failure. A failure is either a
-  wrong policy or a wrong assertion, and which one it is must be decided
-  deliberately rather than by relaxing the assertion.
-- Confirm the security definer functions cannot be used to enumerate groups a
+- **Both migrations replay cleanly from empty.** Seven tables, twenty-two
+  policies, six functions, two enum types, and the realtime publication all
+  create as intended, with no table left unprotected.
+- **The verification suite passes 24 of 24**, driving the API as an anonymous
+  caller and as two separate users.
+- **It found one real fault**, corrected in
+  `0003_fix_group_insert_returning.sql`. The groups select policy hid a newly
+  created group from its own creator, because `RETURNING` is evaluated before
+  the `AFTER INSERT` trigger that records the owner's membership. A plain
+  `INSERT` succeeded while `INSERT ... RETURNING` was refused, which isolated
+  it. This would have broken the client library, which calls
+  `.insert().select()` by default.
+- **It also found one wrong assertion.** A DELETE blocked by a policy returns
+  success with zero rows rather than a refusal, so the test expected the wrong
+  failure shape. Corrected in the test, not the policy.
+- The security definer functions were confirmed unable to enumerate groups the
   caller does not belong to.
-- Record the resulting behaviour as specifications, so later steps have a
-  contract to build against rather than SQL to reread.
 
-Not a code change so much as a promotion: written SQL becomes verified SQL.
+Two genuine failures for two different reasons is better evidence the suite
+works than the artificial check originally planned for it.
+
+Not a code change so much as a promotion: written SQL became verified SQL.
 
 ## Capabilities
 
@@ -65,13 +75,14 @@ any.
 
 ## Impact
 
-- `supabase/migrations/0001_core_schema.sql`, `0002_groups.sql`: verified,
-  and corrected by a new migration if verification finds a fault. Applied
-  migrations are append-only, so nothing already committed is edited in place.
+- `supabase/migrations/0001_core_schema.sql`, `0002_groups.sql`: verified as
+  written, neither edited. `0003_fix_group_insert_returning.sql` adds the one
+  correction verification found. Applied migrations are append-only, so nothing
+  already committed was edited in place.
 - `scripts/verify-rls.mjs`, `seed-dev-db.mjs`: first real execution. Their
   own correctness is under test here as much as the schema's.
-- Requires Docker and a local Supabase stack, which is being installed. Without
-  a container runtime none of this is verifiable.
+- Requires Docker and a local Supabase stack, both now running. Without a
+  container runtime none of this is verifiable.
 - Unblocks step 3, authentication, and step 4, the data layer. Both depend on
   the table shapes settled here.
 - No frontend impact. Nothing in `app/` reads from Postgres yet.

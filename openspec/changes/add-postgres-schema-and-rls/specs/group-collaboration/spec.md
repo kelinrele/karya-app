@@ -80,6 +80,19 @@ so that no group can exist which its own creator cannot read.
 - **THEN** they SHALL immediately be a member of it
 - **AND** they SHALL be recorded as its owner
 
+#### Scenario: The creator requests the group back in the same operation
+
+- **WHEN** a signed-in user creates a group and asks for the created record to
+  be returned by that same request
+- **THEN** the record SHALL be returned to them
+- **AND** it SHALL NOT matter whether their membership has been recorded yet
+
+This scenario is stated separately because the general requirement above does
+not constrain it. An implementation can make the creator a member and still
+refuse to hand them the record, if membership is recorded by a step that
+completes after the record is returned. That is not a hypothetical: it is the
+defect this capability was first released with.
+
 #### Scenario: A user creates a group naming someone else as owner
 
 - **WHEN** a user submits a group whose owner is a different user
