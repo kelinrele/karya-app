@@ -21,6 +21,7 @@ import {
   rest,
   ensureUser,
   deleteUser,
+  writeReceipt,
 } from './supabase-helpers.mjs';
 
 const args = new Set(process.argv.slice(2));
@@ -239,6 +240,15 @@ async function main() {
   console.log(`  daily_completions  ${completions.length}`);
   console.log(`  groups             ${group.length}`);
   console.log(`  group_tasks        ${groupTasks.length}`);
+  // Seeding is setup rather than verification, but a task names it, so a
+  // receipt is what lets that claim be checked rather than trusted.
+  writeReceipt({
+    script: 'seed-dev-db',
+    exitCode: 0,
+    passed: tasks.length + ideas.length + completions.length,
+    total: tasks.length + ideas.length + completions.length,
+  });
+
   console.log(`\nSign in as ${DEV_EMAIL} / ${DEV_PASSWORD}`);
 }
 

@@ -6,7 +6,8 @@
  * the rest run on bare Node.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -153,6 +154,60 @@ export async function deleteUser(cfg, id) {
     method: 'DELETE',
     headers: { apikey: cfg.serviceKey, Authorization: `Bearer ${cfg.serviceKey}` },
   });
+}
+
+/**
+ * Record the outcome of a verification run to test-results/.
+ *
+ * Freshness is judged by content, not modification time. `git checkout`
+ * rewrites mtimes on files whose content never changed, so an mtime-only
+ * comparison marks every receipt stale after a branch switch, which trains
+ * everyone to ignore the warning.
+ *
+ * So the receipt captures the content hashes of the directories that matter.
+ * A reader can then tell "the code genuinely changed" from "the clock moved".
+ * `dirty` records whether either path had uncommitted changes at run time,
+ * because a tree hash says nothing about those.
+ */
+export function writeReceipt({ script, exitCode, passed, total }) {
+  const git = (cmd) => {
+    try {
+      return execSync(`git ${cmd}`, {
+        cwd: ROOT,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }).trim();
+    } catch {
+      return null;
+    }
+  };
+
+  const watched = ['supabase/migrations', 'scripts'];
+  const trees = {};
+  for (const path of watched) {
+    trees[path] = git(`rev-parse HEAD:${path}`);
+  }
+  const dirty = (git(`status --porcelain -- ${watched.join(' ')}`) ?? '') !== '';
+
+  const receipt = {
+    script,
+    exitCode,
+    passed,
+    total,
+    at: new Date().toISOString(),
+    head: git('rev-parse HEAD'),
+    trees,
+    dirty,
+  };
+
+  try {
+    const dir = resolve(ROOT, 'test-results');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(resolve(dir, `${script}.json`), JSON.stringify(receipt, null, 2) + '\n');
+  } catch {
+    // A suite must never fail because bookkeeping failed. The receipt being
+    // absent is itself the signal that the run cannot be vouched for.
+  }
 }
 
 /** Fail fast with a readable message when configuration is missing. */

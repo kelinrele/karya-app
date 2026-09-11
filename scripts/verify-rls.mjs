@@ -26,6 +26,7 @@ import {
   ensureUser,
   signIn,
   deleteUser,
+  writeReceipt,
 } from './supabase-helpers.mjs';
 
 const args = new Set(process.argv.slice(2));
@@ -265,6 +266,13 @@ async function main() {
 
   const failed = results.filter((r) => !r.passed);
   console.log(`\n${results.length - failed.length}/${results.length} assertions passed.`);
+
+  writeReceipt({
+    script: 'verify-rls',
+    exitCode: failed.length > 0 ? 1 : 0,
+    passed: results.length - failed.length,
+    total: results.length,
+  });
 
   if (failed.length > 0) {
     console.error('\nFailed assertions:');
