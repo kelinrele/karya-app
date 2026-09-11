@@ -20,9 +20,12 @@ without waiting on it.
       `npm ls @supabase/supabase-js` in `app/` resolving it and the type check
       still passing. It is already used by `scripts/verify-realtime.mjs`, so
       the library is not new to the project, only to the front end
-- [ ] 1.2 Add `app/.env.example` naming the API URL and publishable key with
-      empty values, verified by the file listing the key names and no key
-      material. The real `.env` stays untracked
+- [x] 1.2 Confirm `app/.env.example` names the API URL and publishable key
+      with empty values, verified by the file listing `VITE_SUPABASE_URL` and
+      `VITE_SUPABASE_ANON_KEY` with nothing after the `=`, and by
+      `git ls-files app/.env.example` showing it tracked. Already in place from
+      the scaffold, so this was verification rather than authoring; the task
+      originally read "add" and was corrected. The real `.env` stays untracked
 - [ ] 1.3 Create the client as a single module-level instance, verified by a
       grep showing exactly one `createClient` call in `app/src`. Two clients
       each install an auth listener and each hold a refresh timer over the same
@@ -31,16 +34,18 @@ without waiting on it.
 
 ## 2. Reconcile the local auth configuration
 
-- [ ] 2.1 Correct the redirect ports in `supabase/config.toml`, verified by
-      `site_url` and `additional_redirect_urls` naming port 5173 and by
-      `npx supabase status` reporting the stack healthy after a restart.
-      They currently read `http://127.0.0.1:3000` and `https://127.0.0.1:3000`
-      while Vite serves on 5173, so an OAuth redirect would return the browser
-      to a port with nothing listening. The second entry is wrong twice over:
-      the local dev server speaks http, not https. Nothing has failed yet only
-      because nothing has attempted a redirect. The first attempt will present
-      as a provider misconfiguration, which is a poor thing to debug at the
-      same moment as a newly created OAuth client, and the fix is one line
+- [x] 2.1 Correct the redirect ports in `supabase/config.toml`, verified by
+      `site_url` and `additional_redirect_urls` naming port 5173, by the auth
+      container's environment showing `GOTRUE_SITE_URL` and
+      `GOTRUE_URI_ALLOW_LIST` on 5173 after a restart, and by all four suites
+      passing from `npx supabase db reset` afterwards. They read
+      `http://127.0.0.1:3000` and `https://127.0.0.1:3000` while Vite serves
+      on 5173, so an OAuth redirect would have returned the browser to a port
+      with nothing listening. The second entry was wrong twice over: the local
+      dev server speaks http, not https. `localhost:5173` is allowed as well,
+      since Vite prints that form and a browser treats the two origins as
+      different. Nothing had failed only because nothing had attempted a
+      redirect
 - [ ] 2.2 Confirm anonymous sign-ins stay disabled, verified by
       `enable_anonymous_sign_ins = false` in `config.toml` and by an assertion
       in `scripts/verify-auth.mjs` that the anonymous sign-in endpoint refuses
