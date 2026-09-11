@@ -157,6 +157,31 @@ The positive control retries a few times. The realtime service restarts during
 immediately afterwards sees a healthy container that is not yet delivering.
 Exhausting the retries still reports inconclusive rather than passing.
 
+## Run receipts
+
+Every script writes a small JSON file to `test-results/` on exit, named for
+the script. It records the exit code, the assertion counts, the time, the
+commit at the time, and a **content hash** of `supabase/migrations/` and
+`scripts/` as they were on disk when the run happened.
+
+A receipt answers one question: does a passing run still speak for what is on
+disk now? A checked-off task naming one of these scripts is a claim; the
+receipt is what lets the claim be checked rather than taken on trust. Local
+pre-commit checks read them. Nothing in the repository does, and
+`test-results/` is ignored.
+
+**The hash is of content on disk, not of the last commit.** Modification times
+are useless for this: `git checkout` rewrites them on files whose content never
+changed, and a rule built on them cries wolf after every branch switch until
+it is switched off. A commit's tree hash is wrong in the other direction: it
+describes what was committed, not what was tested, so a run against
+uncommitted changes records nothing that identifies them. Hashing the working
+tree, using the blob id git would store for each file, is invariant under
+both. Checkout does not change content and commit does not change content, so
+one comparison covers both.
+
+`head` is recorded for the report only. Nothing should be decided from it.
+
 ## Known gaps
 
 - Service-role code paths are not covered. Those bypass access control by

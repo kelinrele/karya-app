@@ -7,6 +7,7 @@
  */
 
 import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -156,39 +157,75 @@ export async function deleteUser(cfg, id) {
   });
 }
 
+/** Never throws; a suite must not fail because bookkeeping did. */
+function git(cmd, input) {
+  try {
+    return execSync(`git ${cmd}`, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      input,
+      stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/** The paths a verification run is understood to have exercised. */
+export const RECEIPT_PATHS = ['supabase/migrations', 'scripts'];
+
+/**
+ * A hash of what is on disk under each path, right now.
+ *
+ * Deliberately not the tree hash of HEAD. That describes the last commit, not
+ * the content a run was tested against: a run against uncommitted changes
+ * would record nothing identifying those changes, and once they were committed
+ * the receipt could neither match nor mismatch them.
+ *
+ * Content on disk is unchanged by `git checkout`, which only rewrites
+ * timestamps, and by `git commit`, which only moves HEAD. So one comparison
+ * against this covers both, with no fallback to modification times.
+ *
+ * Each file's blob id is what git would store for its current content,
+ * filters applied, so a clean file hashes to exactly what HEAD holds.
+ */
+export function contentHash(paths = RECEIPT_PATHS) {
+  const out = {};
+  for (const path of paths) {
+    const listed = git(`ls-files --cached --others --exclude-standard -- ${path}`);
+    if (listed === null) {
+      out[path] = null;
+      continue;
+    }
+    const files = listed
+      .split('\n')
+      .map((f) => f.trim())
+      .filter((f) => f && existsSync(resolve(ROOT, f)))
+      .sort();
+    if (files.length === 0) {
+      out[path] = null;
+      continue;
+    }
+    const blobs = git('hash-object --stdin-paths', files.join('\n') + '\n');
+    if (blobs === null) {
+      out[path] = null;
+      continue;
+    }
+    const ids = blobs.split('\n');
+    const lines = files.map((f, i) => `${ids[i]} ${f}`);
+    out[path] = createHash('sha1').update(lines.join('\n')).digest('hex');
+  }
+  return out;
+}
+
 /**
  * Record the outcome of a verification run to test-results/.
  *
- * Freshness is judged by content, not modification time. `git checkout`
- * rewrites mtimes on files whose content never changed, so an mtime-only
- * comparison marks every receipt stale after a branch switch, which trains
- * everyone to ignore the warning.
- *
- * So the receipt captures the content hashes of the directories that matter.
- * A reader can then tell "the code genuinely changed" from "the clock moved".
- * `dirty` records whether either path had uncommitted changes at run time,
- * because a tree hash says nothing about those.
+ * The receipt identifies the content that was tested, via `contentHash`, so a
+ * reader can tell whether a passing run still speaks for what is on disk.
+ * `head` is informational only; nothing should be decided from it.
  */
 export function writeReceipt({ script, exitCode, passed, total }) {
-  const git = (cmd) => {
-    try {
-      return execSync(`git ${cmd}`, {
-        cwd: ROOT,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      }).trim();
-    } catch {
-      return null;
-    }
-  };
-
-  const watched = ['supabase/migrations', 'scripts'];
-  const trees = {};
-  for (const path of watched) {
-    trees[path] = git(`rev-parse HEAD:${path}`);
-  }
-  const dirty = (git(`status --porcelain -- ${watched.join(' ')}`) ?? '') !== '';
-
   const receipt = {
     script,
     exitCode,
@@ -196,8 +233,7 @@ export function writeReceipt({ script, exitCode, passed, total }) {
     total,
     at: new Date().toISOString(),
     head: git('rev-parse HEAD'),
-    trees,
-    dirty,
+    content: contentHash(),
   };
 
   try {
