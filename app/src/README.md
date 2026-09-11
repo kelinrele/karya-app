@@ -10,6 +10,9 @@ as they are ported from the original build.
 | `main.tsx` | Entry point. Mounts React onto `#root` and throws loudly if the element is missing. |
 | `App.tsx` | Placeholder shell. Replaced screen by screen. |
 | `index.css` | Tailwind import plus the brand design tokens. |
+| `vite-env.d.ts` | Types the `VITE_` variables the bundle may read, so a missing one is a type error rather than an `undefined` at runtime. |
+| `lib/` | The Supabase client and the auth wrappers. See its README. |
+| `hooks/` | `useSession`, with the `isLoading` contract. See its README. |
 
 ## Planned layout
 
@@ -21,10 +24,11 @@ src/
 ├── main.tsx
 ├── App.tsx
 ├── index.css
+├── vite-env.d.ts
+├── lib/          data layer, clients, pure helpers      (present)
+├── hooks/        shared hooks                           (present)
 ├── components/   shared presentational components
-├── features/     one directory per screen, colocated logic and UI
-├── lib/          data layer, clients, pure helpers
-└── hooks/        shared hooks
+└── features/     one directory per screen, colocated logic and UI
 ```
 
 ## Rules

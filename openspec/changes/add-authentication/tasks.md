@@ -16,7 +16,7 @@ without waiting on it.
 
 ## 1. Client and configuration
 
-- [ ] 1.1 Add `@supabase/supabase-js` to `app/package.json`, verified by
+- [x] 1.1 Add `@supabase/supabase-js` to `app/package.json`, verified by
       `npm ls @supabase/supabase-js` in `app/` resolving it and the type check
       still passing. It is already used by `scripts/verify-realtime.mjs`, so
       the library is not new to the project, only to the front end
@@ -26,7 +26,7 @@ without waiting on it.
       `git ls-files app/.env.example` showing it tracked. Already in place from
       the scaffold, so this was verification rather than authoring; the task
       originally read "add" and was corrected. The real `.env` stays untracked
-- [ ] 1.3 Create the client as a single module-level instance, verified by a
+- [x] 1.3 Create the client as a single module-level instance, verified by a
       grep showing exactly one `createClient` call in `app/src`. Two clients
       each install an auth listener and each hold a refresh timer over the same
       stored session, and the resulting intermittent unauthorised response
@@ -95,10 +95,16 @@ without waiting on it.
 - [ ] 4.2 Restore an existing session on load, verified by an assertion that a
       session persisted to storage is recognised by a freshly constructed
       client without credentials being presented again
-- [ ] 4.3 Expose the current user to the application without any component
+- [x] 4.3 Expose the current user to the application without any component
       reading storage directly, verified by a grep finding no direct access to
       the session storage key outside the client module. Step 4 chooses a
-      repository implementation from this value, so it needs one source
+      repository implementation from this value, so it needs one source.
+      Done as `hooks/useSession.ts` over `lib/auth.ts`. It reports
+      `isLoading: true` until storage has answered, because restoring a
+      session is asynchronous and a hard refresh has a moment where the
+      session is unknown rather than absent; treating that moment as
+      signed-out would let the data layer pick the guest store for a
+      signed-in user
 - [ ] 4.4 Confirm sign-out ends access rather than hiding it, verified by
       `node scripts/verify-auth.mjs` replaying a token captured before
       sign-out and receiving no records. Clearing the user from application
