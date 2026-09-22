@@ -5,10 +5,11 @@ application; nothing here runs in production.
 
 Plain Node. Node 20 or newer.
 
-Three of the four scripts have **no dependencies at all** and talk to PostgREST
-and the auth API over `fetch`. Only `verify-realtime.mjs` needs a package,
+Three of the five scripts have **no dependencies at all** and talk to PostgREST
+and the auth API over `fetch`. `verify-realtime.mjs` needs the official client
 because hand-rolling a WebSocket protocol would fail in ways indistinguishable
-from the bug it is meant to catch. Install once at the repository root:
+from the bug it is meant to catch, and `verify-auth.mjs` needs it for the
+client's own session-storage behaviour. Install once at the repository root:
 
 ```bash
 npm install
@@ -20,6 +21,7 @@ npm install
 | `verify-rls.mjs` | No |
 | `verify-constraints.mjs` | No |
 | `verify-realtime.mjs` | Yes |
+| `verify-auth.mjs` | Yes |
 
 ## Prerequisites
 
@@ -29,21 +31,22 @@ A local Supabase stack, and the credentials it prints:
 npx supabase start
 ```
 
-Copy the API URL, anon key, and service role key into `app/.env`. Both scripts
-read that file, and also accept the same names from the environment, which wins
-over the file.
+Copy the API URL, anon key, and service role key into `app/.env`. Every script
+reads that file, and also accepts the same names from the environment, which
+wins over the file.
 
 | Variable | Used for |
 |---|---|
 | `SUPABASE_URL` or `VITE_SUPABASE_URL` | API endpoint |
 | `SUPABASE_ANON_KEY` or `VITE_SUPABASE_ANON_KEY` | Requests as an ordinary caller |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin operations, and bypassing access control |
+| `SUPABASE_JWT_SECRET` | Optional. `verify-auth.mjs` only, to mint an expired token; defaults to the local stack's development secret |
 
 A missing variable produces a named error and exit code `2`, not a stack trace.
 
 ## Safety
 
-**Both scripts refuse to run against a non-local URL.** They create and delete
+**Every script refuses to run against a non-local URL.** They create and delete
 users and rows, so pointing them at a shared project would be destructive.
 `--allow-remote` overrides this and should stay unused.
 
@@ -156,6 +159,59 @@ The positive control retries a few times. The realtime service restarts during
 `supabase db reset` and takes several seconds to start streaming, so a run
 immediately afterwards sees a healthy container that is not yet delivering.
 Exhausting the retries still reports inconclusive rather than passing.
+
+## `verify-auth.mjs`
+
+Checks what a session is, how one is obtained, what ends it, and what every
+authenticated user is guaranteed to have.
+
+```bash
+node scripts/verify-auth.mjs
+node scripts/verify-auth.mjs --keep     # leave the test users behind
+```
+
+Thirty-one assertions in five groups: anonymous sign-in is refused and creates
+no user; the public key with no session sees nothing; sign-up creates exactly
+one profile with the display name falling back through `full_name`, then
+`name`, then the email local part, and a user cannot insert a profile carrying
+another user's id; a session persisted to storage is recognised by a freshly
+constructed client with no credentials, and sign-out empties that storage; and
+what sign-out ends.
+
+Users are created through the public sign-up endpoint, not the admin API. The
+profile trigger and its fallbacks are under test, and the admin path does not
+carry sign-up metadata the way a client does.
+
+**What sign-out ends, and what it provably does not.** Signing out revokes the
+refresh token, so the session cannot be renewed; the suite asserts the exact
+refusal, `400` with `refresh_token_not_found`, not merely any failure, because
+a wedged auth service also fails to renew and must not read as a pass. The
+anonymous sign-up refusal is pinned the same way, to `422` with
+`anonymous_provider_disabled`. Sign-out does not revoke access tokens already
+issued, because they are stateless:
+the API verifies a signature and an expiry and consults nothing else. So a
+token captured before sign-out is accepted until it expires, and the suite
+asserts *that*, rather than asserting a refusal the platform cannot give. Two
+further assertions make the expiry a real bound rather than a claim: the
+token's `exp - iat` is compared to the lifetime the suite expects (a literal
+mirroring `jwt_expiry`, so changing it there fails here with the new number),
+and a token the suite signs itself with `exp` in the past is refused with
+`401`, beside one signed the same way with `exp` in the future that is
+accepted, so the refusal is provably about expiry and not a bad signature. The
+signing secret is the local stack's development default, overridable with
+`SUPABASE_JWT_SECRET`; the suite refuses non-local targets, so no real secret
+is ever involved. The specification records the replay as a stated exception.
+
+Refresh-token rotation is on, so a refresh token used as a control before
+sign-out is consumed by that use. The after-sign-out checks use the rotated
+pair, or they would be testing rotation rather than sign-out.
+
+**The mutation that makes the profile assertions evidence.** With the trigger
+disabled, `alter table auth.users disable trigger on_auth_user_created` as
+`supabase_admin`, six assertions fail, all of them in the profile group, and
+nothing outside it. The cross-user insert is still refused with the trigger
+off, which is correct: that refusal comes from the absence of an insert policy,
+not from the trigger. Re-enabled, all pass.
 
 ## Run receipts
 

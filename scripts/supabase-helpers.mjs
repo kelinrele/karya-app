@@ -49,8 +49,11 @@ export function loadConfig() {
   const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL ?? '';
   const anonKey = env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY ?? '';
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  // Only the auth suite needs this, to mint deliberately expired tokens and
+  // prove the API refuses them. Empty means "use the local stack's default".
+  const jwtSecret = env.SUPABASE_JWT_SECRET ?? '';
 
-  return { url: url.replace(/\/+$/, ''), anonKey, serviceKey };
+  return { url: url.replace(/\/+$/, ''), anonKey, serviceKey, jwtSecret };
 }
 
 /** True when the URL points at a local Supabase stack. */

@@ -93,6 +93,31 @@ idempotent, and the display-name fallback chain covers the two metadata shapes
 Google returns plus an email localpart. Correct-looking is the same state
 `0004`'s trigger was in before it was run.
 
+## Sign-out and stateless tokens
+
+The specification first said a replayed access token "SHALL be refused" after
+sign-out. That described what sign-out ought to mean. A probe, run before any
+assertion was written, showed what it does mean here: the refresh token is
+refused, the access token is accepted until it expires, and so is the earlier
+access token from before rotation.
+
+Access tokens are stateless by design. The API verifies a signature and an
+expiry and consults nothing else, which is what makes it possible to verify
+them without a round trip to the auth service on every request. The price is
+that revocation of an already-issued token does not exist. Sign-out ends the
+session's ability to *continue*; it cannot reach back to tokens already out.
+
+The suite asserts that reality and the lifetime that bounds it, and the
+specification records it as a stated exception. The alternative, an assertion
+of the aspiration, would be red forever and would be deleted.
+
+**Mitigations, recorded and not taken here.** The exposure is one token
+lifetime, currently 3600 seconds. Shortening `jwt_expiry` narrows it at the
+cost of more refresh traffic; it is a configuration decision separate from
+this change. Server-side revocation would need a token denylist checked on
+every request, which discards the property that makes stateless tokens cheap,
+and is not justified by what a token here can reach: one user's own rows.
+
 ## The auth screen belongs to step 5
 
 This change produces no interface. Sign-in is exercised by a script.

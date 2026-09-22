@@ -30,24 +30,44 @@ the user record.
 - **THEN** the application SHALL treat the user as signed out
 - **AND** SHALL NOT present stale user details as though the session were live
 
-### Requirement: Signing out ends access, not merely display
+### Requirement: Signing out ends the session's ability to continue
 
-Signing out SHALL invalidate the session and remove it from browser storage. It
-SHALL NOT be sufficient to clear the user from application state while a usable
-token remains. After signing out, a request SHALL return no personal records.
+Signing out SHALL revoke the session's refresh token and remove the session
+from browser storage, so that the session cannot be renewed and the client
+makes no further authenticated request. It SHALL NOT be sufficient to clear the
+user from application state while a renewable session remains in storage.
+
+**Stated exception.** An access token issued before sign-out remains valid
+until its expiry. Access tokens are stateless: the API verifies a signature
+and an expiry and consults nothing else, so revocation of an already-issued
+token is not available on this platform. The exposure is bounded by the
+configured token lifetime, which SHALL be asserted alongside so that a change
+to it is noticed. This is asserted as it is rather than hidden, for the same
+reason the deletion exception in `group-collaboration` is.
 
 #### Scenario: A user signs out
 
 - **WHEN** a signed-in user signs out
 - **THEN** no session SHALL remain in browser storage
-- **AND** a subsequent request for that user's tasks SHALL return no records
+- **AND** a subsequent request made by that client SHALL carry no session and
+  SHALL return no records
 
-#### Scenario: A token retained from before sign-out is replayed
+#### Scenario: The refresh token is presented after sign-out
+
+- **WHEN** a request attempts to renew the session using the refresh token
+  that was current at sign-out
+- **THEN** the request SHALL be refused
+- **AND** no new access token SHALL be issued
+
+#### Scenario: An access token from before sign-out is replayed
 
 - **WHEN** a request presents an access token captured before the user signed
-  out
-- **THEN** the request SHALL be refused or SHALL return no records
-- **AND** the response SHALL be indistinguishable from one made with no session
+  out and not yet expired
+- **THEN** the request SHALL be accepted, as a property of stateless tokens
+- **AND** that token's lifetime SHALL equal the lifetime the project expects,
+  so a change to the configured lifetime is noticed
+- **AND** a token whose expiry has passed SHALL be refused, so the lifetime is
+  an enforced bound and not merely a claim in the token
 
 ### Requirement: Every authenticated user has a profile
 

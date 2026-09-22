@@ -1,8 +1,9 @@
 # Tasks
 
-Unlike the previous change, none of this is written yet. These are authoring
-tasks, and the verification named on each is what decides whether one is
-genuinely done rather than merely typed.
+When this was proposed, none of it was written. These are authoring tasks, and
+the verification named on each is what decides whether one is genuinely done
+rather than merely typed. Groups 1 through 4 and the proving in group 6 are
+done; group 5 and the close-out that depends on it are open.
 
 Two tasks are called out early because they are pre-existing faults rather than
 new work: the redirect configuration points at a port nothing serves, and the
@@ -46,7 +47,7 @@ without waiting on it.
       since Vite prints that form and a browser treats the two origins as
       different. Nothing had failed only because nothing had attempted a
       redirect
-- [ ] 2.2 Confirm anonymous sign-ins stay disabled, verified by
+- [x] 2.2 Confirm anonymous sign-ins stay disabled, verified by
       `enable_anonymous_sign_ins = false` in `config.toml` and by an assertion
       in `scripts/verify-auth.mjs` that the anonymous sign-in endpoint refuses
       and creates no user. Guest mode is browser storage; the schema has no
@@ -55,7 +56,7 @@ without waiting on it.
 
 ## 3. Prove the profile trigger
 
-- [ ] 3.1 Assert that creating a user creates a profile, verified by
+- [x] 3.1 Assert that creating a user creates a profile, verified by
       `node scripts/verify-auth.mjs` reading `public.profiles` after a sign-up
       and finding exactly one row whose id matches the new user.
       **Nothing asserts this today.** `handle_new_user` and
@@ -65,19 +66,19 @@ without waiting on it.
       whether a profile was created and then cascaded away or was never
       created at all. Step 3 is where the assumption starts to matter, because
       every signed-in user is expected to have a profile row from here on
-- [ ] 3.2 Confirm the display name falls back correctly, verified by
+- [x] 3.2 Confirm the display name falls back correctly, verified by
       `node scripts/verify-auth.mjs` covering all three branches of the
       `coalesce`: a user with `full_name` metadata, a user with `name` and no
       `full_name`, and a user with neither, whose display name must become the
       local part of the email address. A fallback chain where only the first
       branch is ever exercised is three untested branches wearing one test
-- [ ] 3.3 Confirm a client cannot manufacture a profile it does not own,
+- [x] 3.3 Confirm a client cannot manufacture a profile it does not own,
       verified by `node scripts/verify-auth.mjs` attempting an insert into
       `profiles` naming another user's id and observing a refusal. `profiles`
       deliberately carries no insert policy, since the trigger is
       `security definer` and needs none, so this asserts that an absence is
       doing its job
-- [ ] 3.4 **Only if 3.1 or 3.2 fails**, correct the trigger in the next
+- [x] 3.4 **Not needed: 3.1 and 3.2 passed.** Was: only if either fails, correct the trigger in the next
       migration in sequence, verified by a clean `npx supabase db reset`
       followed by the full suite passing. Prove the behaviour before changing
       anything. During the previous change a migration was written on a
@@ -89,10 +90,10 @@ without waiting on it.
 
 ## 4. Email and password sign-in
 
-- [ ] 4.1 Implement sign-up, sign-in, and sign-out against the local stack,
+- [x] 4.1 Implement sign-up, sign-in, and sign-out against the local stack,
       verified by `node scripts/verify-auth.mjs` completing a full round trip
       and by the created user appearing in `auth.users`
-- [ ] 4.2 Restore an existing session on load, verified by an assertion that a
+- [x] 4.2 Restore an existing session on load, verified by an assertion that a
       session persisted to storage is recognised by a freshly constructed
       client without credentials being presented again
 - [x] 4.3 Expose the current user to the application without any component
@@ -105,11 +106,16 @@ without waiting on it.
       session is unknown rather than absent; treating that moment as
       signed-out would let the data layer pick the guest store for a
       signed-in user
-- [ ] 4.4 Confirm sign-out ends access rather than hiding it, verified by
-      `node scripts/verify-auth.mjs` replaying a token captured before
-      sign-out and receiving no records. Clearing the user from application
-      state while a usable token survives looks identical in the interface and
-      is not the same thing
+- [x] 4.4 Confirm sign-out ends what it can, verified by
+      `node scripts/verify-auth.mjs`: the refresh token is refused afterwards,
+      so the session cannot be renewed, and the client's storage is empty.
+      **Corrected from "replaying a token receives no records."** A probe run
+      before the assertion was written showed the access token is accepted
+      until it expires; tokens are stateless and the API checks signature and
+      expiry only. The suite asserts that and the configured lifetime that
+      bounds it, and the spec carries it as a stated exception. Clearing the
+      user from application state while a renewable session survives in
+      storage is still the thing this guards against
 
 ## 5. Google OAuth
 
@@ -131,24 +137,28 @@ without waiting on it.
 
 ## 6. Prove it, and record
 
-- [ ] 6.1 Write `scripts/verify-auth.mjs` in the established shape, verified by
+- [x] 6.1 Write `scripts/verify-auth.mjs` in the established shape, verified by
       it refusing to run against a non-local target and writing a receipt to
       `test-results/` on exit like the other three suites
-- [ ] 6.2 Pair every negative assertion with a positive control, verified by
+- [x] 6.2 Pair every negative assertion with a positive control, verified by
       review of the suite: each "no records returned" is accompanied by a
       request that must succeed. Otherwise a broken request and a correct
       refusal are indistinguishable, which is the trap both the delete
       assertion and the realtime test fell into in step 2
-- [ ] 6.3 Confirm the suite can fail, verified by a mutation: disable the
+- [x] 6.3 Confirm the suite can fail, verified by a mutation: disable the
       profile trigger, observe the profile assertions fail and nothing else,
       then restore. A mutation that breaks nothing is a finding, not a
-      nuisance
-- [ ] 6.4 Run all four suites from an empty database, verified by
+      nuisance. **Done: six failed, all in the profile group, none outside
+      it; 23/29 with the trigger off, 29/29 restored.** The first attempt, as
+      `postgres`, was refused as non-owner and the suite passed 29/29 with the
+      trigger still on; `supabase_admin` owns it, and `pg_trigger.tgenabled`
+      is now checked after each step rather than trusting the command
+- [x] 6.4 Run all four suites from an empty database, verified by
       `npx supabase db reset` followed by each suite passing, so the port
       change in 2.1 is proved not to have disturbed anything else
-- [ ] 6.5 Mark step 3 complete in the migration plan, verified by the plan
+- [ ] 6.5 **Open: waits on group 5.** Mark step 3 complete in the migration plan, verified by the plan
       naming step 4 as the next unfinished step
-- [ ] 6.6 Run `npx openspec validate add-authentication --strict`, verified by
+- [ ] 6.6 **Open: runs at every commit, checked with the last.** Run `npx openspec validate add-authentication --strict`, verified by
       it reporting no errors
-- [ ] 6.7 Commit with explicit paths, verified by `git status --short` listing
+- [ ] 6.7 **Open: the final commit, after group 5.** Commit with explicit paths, verified by `git status --short` listing
       only the intended files, with no `.env` and no local tooling in the index
